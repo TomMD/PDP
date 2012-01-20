@@ -67,7 +67,8 @@ data PDPOp
   | MQA
   | SWP
   | CAM
-  | UnknownMicro
+  | UnknownMicroOp
+  | UnknownOp
   deriving (Eq, Ord, Show, Enum)
 
 data Indirection = Direct | Indirect
@@ -105,7 +106,7 @@ decodeInstr i
   | op >= 0 && op < 6 = decodeMemInstr (fromEnum op) i
   | op == 6           = instr IOOp i
   | op == 7           = instr (decodeMicroInstr i) i
-  | otherwise         = error ("Unrecognized op code: " ++ show i)
+  | otherwise         = UnknownOp
  where
   op = i `shiftR` 9
 
@@ -146,7 +147,7 @@ decodeMicroInstr 3857 = MQL
 decodeMicroInstr 3905 = MQA
 decodeMicroInstr 3921 = SWP
 decodeMicroInstr 3985 = CAM
-decodeMicroInstr _ = UnknownMicro
+decodeMicroInstr _ = UnknownMicroOp
 
 -- "To Binary" intented to appear like
 -- 0b11011 in the same way 0x.... is hex
