@@ -16,31 +16,58 @@ import Numeric (readOct)
 import Data.Bits (shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.Char (digitToInt, isDigit)
 
-data Value = VInstr Instr | VAddr Addr
+data Value = VInstr { vInstr :: Instr } | VAddr { vAddr :: Addr }
   deriving (Eq, Ord, Show)
+
+isInstr :: Value -> Bool
+isInstr (VInstr _) = True
+isInstr _          = False
+
+isAddr :: Value -> Bool
+isAddr = not . isInstr
 
 type Offset = Int
 
 -- The 'Instr'uncation data type carries the decoded op,
 -- indirection, memory page flags, and offset if applicable,
 -- and the raw integer that was decoded.
-data Instr = Instr PDPOp (Maybe Indirection) (Maybe MemPage) (Maybe Offset) Int
+data Instr = Instr 
+  { instrOp          :: PDPOp
+  , instrIndirection :: (Maybe Indirection)
+  , instrMemPage     :: (Maybe MemPage)
+  , instrOffset      :: (Maybe Offset)
+  , instrCode        :: Int }
   deriving (Eq, Ord, Show)
 
-instr x raw = Instr x Nothing Nothing Nothing raw
+instr constr [] raw = Instr UnknownOp   Nothing Nothing Nothing raw
+instr constr xs raw = Instr (constr xs) Nothing Nothing Nothing raw
 
 type PDPOps = [PDPOp]
-data PDPOp
+data PDPOp = PDPOpMem MemOp
+           | PDPOpIO IOOp 
+           | PDPOpMicro1 [MicroOp1]
+           | PDPOpMicro2 [MicroOp2]
+           | PDPOpMicro3 [MicroOp3]
+           | UnknownOp
+  deriving (Eq, Ord, Show)
+
+data MemOp  
   = AND  -- Logical and
   | TAD  -- two's comp add
   | ISZ  -- Increment memory and inc PC if zero
   | DCA  -- store acc to memory and clear acc
   | JMS  -- store PC to addr, read new pc from addr + 1
   | JMP  -- read new pc from addr
+  deriving (Eq, Ord, Show, Enum)
+
+data IOOp =
   -- A general placeholder for IO
-  | IOOp
+    IOOp
+  deriving (Eq, Ord, Show, Enum)
+
+data MicroOp1 =
   -- Microcodes
-  | NOP
+    NOP
   | CLA1
   | CLL
   | CMA
@@ -50,8 +77,11 @@ data PDPOp
   | RTR
   | RAL
   | RTL
+  deriving (Eq, Ord, Show, Enum)
+
+data MicroOp2 =
   -- Group 2
-  | SMA
+    SMA
   | SZA
   | SNL
   | SPA
@@ -61,14 +91,15 @@ data PDPOp
   | CLA2
   | OSR
   | HLT
+  deriving (Eq, Ord, Show, Enum)
+
+data MicroOp3 =
   -- Group 3
-  | CLA3
+    CLA3
   | MQL
   | MQA
   | SWP
   | CAM
-  | UnknownMicroOp
-  | UnknownOp
   deriving (Eq, Ord, Show, Enum)
 
 data Indirection = Direct | Indirect
@@ -103,51 +134,76 @@ isAddrFormat c   = error ("Invalid initial character in an OBJ line: " ++ show c
 
 decodeInstr :: Int -> Instr
 decodeInstr i
-  | op >= 0 && op < 6 = decodeMemInstr (fromEnum op) i
-  | op == 6           = instr IOOp i
-  | op == 7           = instr (decodeMicroInstr i) i
-  | otherwise         = UnknownOp
+  | op >= 0 && op < 6 = decodeMemInstr op i
+  | op == 6           = Instr (PDPOpIO IOOp) Nothing Nothing Nothing i
+  | op == 7 && not (testBit i 8) = instr PDPOpMicro1 (decodeMicroInstr1 i) i
+  | op == 7 && testBit i 8
+            && testBit i 0       = instr PDPOpMicro2 (decodeMicroInstr2 i) i
+  | op == 7 && testBit i 8
+            && testBit i 0       = instr PDPOpMicro3 (decodeMicroInstr3 i) i
+  | otherwise         = instr (const UnknownOp) [] i
  where
   op = i `shiftR` 9
 
 decodeMemInstr :: Int -> Int -> Instr
-decodeMemInstr op i = Instr (toEnum op) (Just ind) (Just mempg) (Just off) i
+decodeMemInstr op i = Instr (PDPOpMem $ toEnum op) (Just ind) (Just mempg) (Just off) i
  where
  ind   = if testBit i 8 then Indirect else Direct
  mempg = if testBit i 7 then CurrentPage else ZeroPage
  off   = i .&. ob 1111111
 
+decodeMicro :: [(Int,a)] -> Int -> [a]
+decodeMicro masks i
+  = map snd
+  . filter ((\code -> (i .&. code) == code) . fst)
+  $ masks
+
 -- Micro instrs
-decodeMicroInstr :: Int -> PDPOp
+decodeMicroInstr1 :: Int -> [MicroOp1]
+decodeMicroInstr1 = decodeMicro microOp1Masks
+
+decodeMicroInstr2 :: Int -> [MicroOp2]
+decodeMicroInstr2 = decodeMicro microOp2Masks
+
+decodeMicroInstr3 :: Int -> [MicroOp3]
+decodeMicroInstr3 = decodeMicro microOp3Masks
+
 -- Group 1
-decodeMicroInstr 3584 = NOP
-decodeMicroInstr 3712 = CLA1
-decodeMicroInstr 3648 = CLL
-decodeMicroInstr 3616 = CMA
-decodeMicroInstr 3600 = CML
-decodeMicroInstr 3585 = IAC
-decodeMicroInstr 3592 = RAR
-decodeMicroInstr 3594 = RTR
-decodeMicroInstr 3588 = RAL
-decodeMicroInstr 3590 = RTL
+microOp1Masks :: [(Int,MicroOp1)]
+microOp1Masks =
+  [ (3584, NOP)
+  , (3712, CLA1)
+  , (3648, CLL)
+  , (3616, CMA)
+  , (3600, CML)
+  , (3585, IAC)
+  , (3592, RAR)
+  , (3594, RTR)
+  , (3588, RAL)
+  , (3590, RTL)]
+
 -- Group 2 micro instrs
-decodeMicroInstr 3904 = SMA
-decodeMicroInstr 3872 = SZA
-decodeMicroInstr 3856 = SNL
-decodeMicroInstr 3912 = SPA
-decodeMicroInstr 3880 = SNA
-decodeMicroInstr 3864 = SZL
-decodeMicroInstr 3848 = SKP
-decodeMicroInstr 3968 = CLA2
-decodeMicroInstr 3844 = OSR
-decodeMicroInstr 3842 = HLT
+microOp2Masks :: [(Int,MicroOp2)]
+microOp2Masks =
+ [ (3904, SMA)
+ , (3872, SZA)
+ , (3856, SNL)
+ , (3912, SPA)
+ , (3880, SNA)
+ , (3864, SZL)
+ , (3848, SKP)
+ , (3968, CLA2)
+ , (3844, OSR)
+ , (3842, HLT)]
+ 
 -- Group 3 micro instrs
-decodeMicroInstr 3969 = CLA3
-decodeMicroInstr 3857 = MQL
-decodeMicroInstr 3905 = MQA
-decodeMicroInstr 3921 = SWP
-decodeMicroInstr 3985 = CAM
-decodeMicroInstr _ = UnknownMicroOp
+microOp3Masks :: [(Int,MicroOp3)]
+microOp3Masks =
+ [ (3969, CLA3)
+ , (3857, MQL)
+ , (3905, MQA)
+ , (3921, SWP)
+ , (3985, CAM)]
 
 -- "To Binary" intented to appear like
 -- 0b11011 in the same way 0x.... is hex
