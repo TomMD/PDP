@@ -4,6 +4,7 @@ module Types
     -- * Types
   , MachineState(..)
   , Purpose
+  , Stats(..)
     -- * Helpers
   , initialState, initialMemory) where
 
