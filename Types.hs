@@ -174,7 +174,7 @@ instance Bits Int12 where
   (.|.) = modOp12 (.|.)
   (.&.) = modOp12 (.&.)
   xor   = modOp12 xor
-  complement = (+0) . Int12 . unInt12
+  complement = (+0) . Int12 . complement . unInt12
   shift (Int12 i) r = Int12 (shift i r) + 0
   rotate (Int12 i) r = Int12 (rotate i r) + 0
   bit 11 = minBound
