@@ -13,12 +13,12 @@ module Parse
   , encodeInstr
   ) where
 
-import Numeric (readOct)
 import Data.Bits (shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.Char (digitToInt, isDigit)
+import Numeric
 
-data Value = VInstr { vInstr :: Instr } | VAddr { vAddr :: Addr }
-  deriving (Eq, Ord, Show)
+import Types
+import Util
 
 isInstr :: Value -> Bool
 isInstr (VInstr _) = True
@@ -27,89 +27,8 @@ isInstr _          = False
 isAddr :: Value -> Bool
 isAddr = not . isInstr
 
-type Offset = Int
-
--- The 'Instr'uncation data type carries the decoded op,
--- indirection, memory page flags, and offset if applicable,
--- and the raw integer that was decoded.
-data Instr = Instr 
-  { instrOp          :: PDPOp
-  , instrIndirection :: (Maybe Indirection)
-  , instrMemPage     :: (Maybe MemPage)
-  , instrOffset      :: (Maybe Offset)
-  , instrCode        :: Int }
-  deriving (Eq, Ord, Show)
-
 instr constr [] raw = Instr UnknownOp   Nothing Nothing Nothing raw
 instr constr xs raw = Instr (constr xs) Nothing Nothing Nothing raw
-
-type PDPOps = [PDPOp]
-data PDPOp = PDPOpMem MemOp
-           | PDPOpIO IOOp 
-           | PDPOpMicro1 [MicroOp1]
-           | PDPOpMicro2 [MicroOp2]
-           | PDPOpMicro3 [MicroOp3]
-           | UnknownOp
-  deriving (Eq, Ord, Show)
-
-data MemOp  
-  = AND  -- Logical and
-  | TAD  -- two's comp add
-  | ISZ  -- Increment memory and inc PC if zero
-  | DCA  -- store acc to memory and clear acc
-  | JMS  -- store PC to addr, read new pc from addr + 1
-  | JMP  -- read new pc from addr
-  deriving (Eq, Ord, Show, Enum)
-
-data IOOp =
-  -- A general placeholder for IO
-    IOOp
-  deriving (Eq, Ord, Show, Enum)
-
-data MicroOp1 =
-  -- Microcodes
-    NOP
-  | CLA1
-  | CLL
-  | CMA
-  | CML
-  | IAC
-  | RAR
-  | RTR
-  | RAL
-  | RTL
-  deriving (Eq, Ord, Show, Enum)
-
-data MicroOp2 =
-  -- Group 2
-    SMA
-  | SZA
-  | SNL
-  | SPA
-  | SNA
-  | SZL
-  | SKP
-  | CLA2
-  | OSR
-  | HLT
-  deriving (Eq, Ord, Show, Enum)
-
-data MicroOp3 =
-  -- Group 3
-    CLA3
-  | MQL
-  | MQA
-  | SWP
-  | CAM
-  deriving (Eq, Ord, Show, Enum)
-
-data Indirection = Direct | Indirect
-  deriving (Eq, Ord, Show)
-data MemPage = ZeroPage | CurrentPage
-  deriving (Eq, Ord, Show)
-
-newtype Addr = Addr { unAddr :: Int }
-  deriving (Eq, Ord, Show)
 
 -- |Parse and ASCii obj file into an AST
 parseObj :: String -> [Value]

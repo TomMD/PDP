@@ -4,6 +4,9 @@ module Arch
 
 import Numeric (readOct)
 import Data.Char (isOctDigit)
+import Memory
+
+-- FIXME put any constants here!  Constants such as the auto-increment values.
 
 nrCyclesOp :: PDPOp -> Int
 nrCyclesOp o
@@ -19,17 +22,3 @@ nrCycles instr@(Instr op _ _ _ _)
   | addrModeAutoIndexing instr = 2 + nrCyclesOp op
   | addrModeIndirect instr     = 1 + nrCyclesOp op
   | otherwise                  =     nrCyclesOp op
-
-addrModeAutoIndexing (Instr op ind mp off _) =
-  ind == Just Indirect &&
-  mp  == Just ZeroPage &&
-  off >= Just (oct 10)
-  off <= Just (oct 17)
-addrModeIndirect (Instr op ind mp off _) =
-  ind == Just Indirect && (   mp /= Just ZeroPage
-                           || off < Just (oct 10)
-                           || off > Just (oct 17)
-                          )
-
--- Interprete a numeric literal as octal
-oct = fst . head . readOct . filter isOctDigit . show :: Int -> Int
