@@ -10,6 +10,7 @@ module Parse
   -- * The functions
   , parseObj
   , decodeInstr
+  , encodeInstr
   ) where
 
 import Numeric (readOct)
@@ -132,6 +133,9 @@ isAddrFormat '1' = True
 isAddrFormat '0' = False
 isAddrFormat c   = error ("Invalid initial character in an OBJ line: " ++ show c)
 
+encodeInstr :: Instr -> Int
+encodeInstr (Instr _ _ _ _ i) = i
+
 decodeInstr :: Int -> Instr
 decodeInstr i
   | op >= 0 && op < 6 = decodeMemInstr op i
@@ -171,39 +175,19 @@ decodeMicroInstr3 = decodeMicro microOp3Masks
 -- Group 1
 microOp1Masks :: [(Int,MicroOp1)]
 microOp1Masks =
-  [ (3584, NOP)
-  , (3712, CLA1)
-  , (3648, CLL)
-  , (3616, CMA)
-  , (3600, CML)
-  , (3585, IAC)
-  , (3592, RAR)
-  , (3594, RTR)
-  , (3588, RAL)
-  , (3590, RTL)]
+  [(oct 7000, NOP), (oct 7200, CLA1), (oct 7100, CLL), (oct 7040, CMA), (oct 7020, CML),
+   (oct 7001, IAC), (oct 7010, RAR), (oct 7012, RTR), (oct 7004, RAL), (oct 7006, RTL)]
 
 -- Group 2 micro instrs
 microOp2Masks :: [(Int,MicroOp2)]
 microOp2Masks =
- [ (3904, SMA)
- , (3872, SZA)
- , (3856, SNL)
- , (3912, SPA)
- , (3880, SNA)
- , (3864, SZL)
- , (3848, SKP)
- , (3968, CLA2)
- , (3844, OSR)
- , (3842, HLT)]
- 
+  [(oct 7500, SMA), (oct 7440, SZA), (oct 7420, SNL), (oct 7510, SPA), (oct 7450, SNA),
+   (oct 7430, SZL), (oct 7410, SKP), (oct 7600, CLA2), (oct 7404, OSR), (oct 7402, HLT)]
+
 -- Group 3 micro instrs
 microOp3Masks :: [(Int,MicroOp3)]
 microOp3Masks =
- [ (3969, CLA3)
- , (3857, MQL)
- , (3905, MQA)
- , (3921, SWP)
- , (3985, CAM)]
+  [(oct 7601, CLA3), (oct 7421, MQL), (oct 7501, MQA), (oct 7521, SWP), (oct 7621, CAM)]
 
 -- "To Binary" intented to appear like
 -- 0b11011 in the same way 0x.... is hex
