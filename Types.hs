@@ -19,7 +19,8 @@ module Types
   , Addr(..)
   , Offset
     -- * Helpers
-  , initialState, initialMemory, ob) where
+  , initialState, initialMemory, initialStats
+  , opIsMem, opIsIO, opIsMicro) where
 
 import qualified Data.Map as M
 import Data.Bits
@@ -34,10 +35,11 @@ type MemoryLog = [(Purpose,Addr)]
 
 -- The Stats needing tracked for the assignment
 data Stats =
-  Stats { nrCycles :: Integer
+  Stats { cycleCnt :: Integer
         , instrBreakdown :: M.Map PDPOp Integer
         }
 
+initialStats = Stats 0 M.empty
 
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
@@ -80,6 +82,20 @@ data PDPOp = PDPOpMem MemOp
            | PDPOpMicro3 [MicroOp3]
            | UnknownOp
   deriving (Eq, Ord, Show)
+
+opIsMem :: PDPOp -> Bool
+opIsMem (PDPOpMem _) = True
+opIsMem _            = False
+
+opIsIO :: PDPOp -> Bool
+opIsIO (PDPOpIO _) = True
+opIsIO _           = False
+
+opIsMicro :: PDPOp -> Bool
+opIsMicro (PDPOpMicro1 _) = True
+opIsMicro (PDPOpMicro2 _) = True
+opIsMicro (PDPOpMicro3 _) = True
+opIsMicro _               = False
 
 data MemOp
   = AND  -- Logical and
