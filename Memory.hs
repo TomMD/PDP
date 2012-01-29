@@ -1,16 +1,21 @@
 module Memory 
   ( renderMemLog
   , load, store, fetch
+  , effectiveAddr
   , loadProgram
   )where
 
+import Data.Bits
 import qualified Data.Map as M
 import Numeric (showOct)
 import Control.Monad.State (gets)
+import Control.Monad (liftM)
 
+import Arch (addrMode, AddrMode(..))
 import Monad
 import Parse (decodeInstr, encodeInstr)
 import Types
+import Util
 
 renderMemLog :: MemoryLog -> String
 renderMemLog = unlines . map (\(p,a) -> show (fromEnum p) ++ " " ++ showOct (unAddr a) "" ++ "\n")
@@ -22,22 +27,60 @@ incPC = modPC (+1)
 -- End Utilities --
 
 -- Memory Operations --
+
+-- |load a value from a given address.  If this is for instructions, use 'fetch' instead.
 load :: Addr -> PDP8 Int12
 load a =
   logMem DataRead a >>
   gets (M.findWithDefault 0 a . mem)
 
+-- |Store a 'Int12' at a given memory address
 store :: Addr -> Int12 -> PDP8 ()
 store a i =
   logMem DataWrite a >> 
   modMem (M.insert a i)
 
+-- |Fetch and decode an instruction from a memory address
 fetch :: Addr -> PDP8 Instr
 fetch a = do
   logMem InstrFetch a
   i <- gets (decodeInstr. M.findWithDefault 0 a . mem)
   incPC
   return i
+
+-- |Given the newly fetched instruction, which must be a memory
+-- operation, returns the effective address while performing any
+-- needed auto-incrementing (costing an additional load and store - correct? TODO CHECKME).
+--
+-- FIXME This should be called before (I think) incrementing the PC??
+-- Probably before!  check the behavior of a PDP8 in the
+-- documentation!
+effectiveAddr :: Instr -> PDP8 Addr
+effectiveAddr i@(Instr _ _ (Just ZeroPage) (Just off) _) = do
+  case addrMode i of
+    ModeIndirect -> liftM Addr (load (Addr off))
+    ModeDirect   -> do
+      pcAddr <- getPC
+      let ea = (pcAddr .&. ob 111110000000) .|. off
+      return (Addr ea)
+    ModeAutoIndexing -> do
+      let ptr = Addr off
+      addr <- load ptr
+      store (Addr off) (addr + 1) 
+      return (Addr (addr+1))
+    _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
+eAddr i@(Instr _ _ (Just CurrentPage) (Just off) _) = do
+  pcAddr <- liftM (.&. ob 111110000000) getPC
+  let eAddr = Addr (off .|. pcAddr)
+  case addrMode i of
+    ModeIndirect -> liftM Addr (load eAddr)
+    ModeDirect   -> return eAddr
+    ModeAutoIndexing -> error $ "addrMode is broken - autoindexing is not valid with the\ 
+                              \ CurrentPage bit set.  Instruction code of " ++ (show $ instrCode i)
+    _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
+eAddr _ = error "Can not compute the effective address of a non-memory operation.\
+                 \ The parser must have failed and resulted in an invalid AST for a\ 
+                 \ given instruction."
 
 -- |Given a list of values produced by parseObj, load the data into
 -- memory. N.B. 'loadProgram' won't adjust the memory access counters!

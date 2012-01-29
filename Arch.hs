@@ -1,11 +1,16 @@
 module Arch
   ( nrCycles
+  , addrMode, AddrMode(..)
+    -- Helpers
+  , addrModeIndirect, addrModeAutoIndexing, addrModeDirect
   ) where
 
-import Numeric (readOct)
 import Data.Char (isOctDigit)
-import Memory
+import Numeric (readOct)
+
+import Monad
 import Types
+import Util
 
 -- FIXME put any constants here!  Constants such as the auto-increment values.
 
@@ -23,7 +28,20 @@ nrCycles instr@(Instr op _ _ _ _)
   | otherwise                  =     nrCyclesOp op
 
 addrModeIndirect :: Instr -> Bool
-addrModeIndirect = undefined
+addrModeIndirect = (== ModeIndirect) . addrMode
 
 addrModeAutoIndexing :: Instr -> Bool
-addrModeAutoIndexing = undefined
+addrModeAutoIndexing = (== ModeAutoIndexing) . addrMode
+
+addrModeDirect :: Instr -> Bool
+addrModeDirect = (== ModeDirect) . addrMode
+
+data AddrMode = ModeIndirect | ModeDirect | ModeAutoIndexing | NonMemoryOperation
+              deriving (Eq, Ord, Show)
+
+addrMode :: Instr -> AddrMode
+addrMode (Instr op (Just Indirect) (Just m) (Just o) _)
+  | o >= oct 10 && o <= oct 17 && m == ZeroPage = ModeAutoIndexing
+  | otherwise = ModeIndirect
+addrMode (Instr op (Just Direct) _ _ _) = ModeDirect
+addrMode _ = NonMemoryOperation

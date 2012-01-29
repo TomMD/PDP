@@ -16,12 +16,12 @@ step = do
   modPC (+1) -- FIXME adding just 1, PC is in words I hope?
 
 stepInstr :: Instr -> PDP8 ()
-stepInstr i@(Instr (PDPOpMem mo)    _ _ _ _) = stepInstrMemOp i
-stepInstr i@(Instr (PDPOpIO ms) _ _ _ _)     = stepInstrIOOp i
-stepInstr i@(Instr (PDPOpMicro1 ms) _ _ _ _) = stepInstrMicro1 i
-stepInstr i@(Instr (PDPOpMicro2 ms) _ _ _ _) = stepInstrMicro2 i
-stepInstr i@(Instr (PDPOpMicro3 ms) _ _ _ _) = stepInstrMicro3 i
-stepInstr i@(Instr UnknownOp        _ _ _ _) = stepInstrUnknown i
+stepInstr i@(Instr (PDPOpMem _)    _ _ _ _) = stepInstrMemOp i
+stepInstr i@(Instr (PDPOpIO _)     _ _ _ _) = stepInstrIOOp i
+stepInstr i@(Instr (PDPOpMicro1 _) _ _ _ _) = stepInstrMicro1 i
+stepInstr i@(Instr (PDPOpMicro2 _) _ _ _ _) = stepInstrMicro2 i
+stepInstr i@(Instr (PDPOpMicro3 _) _ _ _ _) = stepInstrMicro3 i
+stepInstr i@(Instr UnknownOp       _ _ _ _) = stepInstrUnknown i
 
 
 stepInstrMemOp :: Instr -> PDP8 ()
