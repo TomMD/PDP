@@ -35,17 +35,20 @@ modMem f = modify (\s -> s { mem = f (mem s)})
 modStats :: (Stats -> Stats) -> PDP8 ()
 modStats = PDP8 . lift . modify
 
-getPC, getSR :: PDP8 Int12
+getPC, getSR, getAC :: PDP8 Int12
 getPC   = gets pc
 getSR   = gets sr
+getAC   = gets ac
 
-setPC, setSR :: Int12 -> PDP8 ()
+setPC, setSR, setAC :: Int12 -> PDP8 ()
 setPC x = get >>= \s -> put s { pc = x }
 setSR x = get >>= \s -> put s { sr = x }
+setAC x = get >>= \s -> put s { ac = x }
 
-modPC, modSR :: (Int12 -> Int12) -> PDP8 ()
+modPC, modSR, modAC :: (Int12 -> Int12) -> PDP8 ()
 modPC f = getPC >>= setPC . f
 modSR f = getSR >>= setSR . f
+modAC f = getAC >>= setAC . f
 
 getL   = gets lb
 setL x = get >>= \s -> put s { lb = x }

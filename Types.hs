@@ -44,7 +44,7 @@ initialStats = Stats 0 M.empty
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
 data MachineState =
-  MS { pc,sr        :: Int12
+  MS { pc,sr,ac     :: Int12
      , lb           :: Int -- 1 bit
      , mem          :: Memory
      } deriving (Eq, Ord, Show)
