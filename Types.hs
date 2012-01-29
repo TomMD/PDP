@@ -55,7 +55,7 @@ type Memory = M.Map Addr Int12
 data Purpose = DataRead | DataWrite | InstrFetch
   deriving (Eq, Ord, Show, Enum)
 
-initialState  = MS 0 0 0 initialMemory
+initialState  = MS 0 0 0 0 initialMemory
 initialMemory = M.empty
 
 data Value = VInstr { vInstr :: Instr } | VAddr { vAddr :: Addr }
