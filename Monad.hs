@@ -10,6 +10,7 @@ module Monad
   , logMem
   , logBranch
   , modMem
+  , modStats
   , getPC, setPC, modPC
   , getL, setL, modL
   , getSR, setSR, modSR
@@ -19,17 +20,20 @@ import Control.Monad.State
 import Control.Monad.Writer
 import Types
 
-newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (WriterT Branches (WriterT MemoryLog IO)) a }
+newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats (WriterT Branches (WriterT MemoryLog IO))) a }
   deriving (MonadState MachineState, Monad, MonadWriter Branches)
 
 logBranch :: Addr -> Addr -> PDP8 ()
 logBranch src target = tell [(src,target)]
 
 logMem :: Purpose -> Addr -> PDP8 ()
-logMem p a = PDP8 $ lift $ lift (tell [(p,a)])
+logMem p a = PDP8 $ lift $ lift $ lift (tell [(p,a)])
 
 modMem :: (Memory -> Memory) -> PDP8 ()
 modMem f = modify (\s -> s { mem = f (mem s)})
+
+modStats :: (Stats -> Stats) -> PDP8 ()
+modStats = PDP8 . lift . modify
 
 getPC, getSR :: PDP8 Int12
 getPC   = gets pc
@@ -50,17 +54,18 @@ modL :: (Int -> Int) -> PDP8 ()
 modL f = getL >>= setL . f
 
 evalPDP8 :: PDP8 a -> IO a
-evalPDP8 = liftM (\(m,b,s,a) -> a) . runPDP8
+evalPDP8 = liftM (\(m,b,s,_,a) -> a) . runPDP8
 
 logPDP8 :: PDP8 a -> IO (MemoryLog,Branches)
-logPDP8 = liftM (\(m,b,s,a) -> (m,b)) . runPDP8
+logPDP8 = liftM (\(m,b,s,_,a) -> (m,b)) . runPDP8
 
-execPDP8 :: PDP8 a -> IO (MemoryLog, Branches, MachineState)
-execPDP8 = liftM (\(m,b,s,a) -> (m,b,s)) . runPDP8
+execPDP8 :: PDP8 a -> IO (MemoryLog, Branches, MachineState,Stats)
+execPDP8 = liftM (\(m,b,s,t,a) -> (m,b,s,t)) . runPDP8
 
-runPDP8 :: PDP8 a -> IO (MemoryLog, Branches, MachineState, a)
-runPDP8 = liftM (\(((a,st),br), ml) -> (ml, br, st,a))
+runPDP8 :: PDP8 a -> IO (MemoryLog, Branches, MachineState, Stats, a)
+runPDP8 = liftM (\((((a,st),stats),br), ml) -> (ml, br, st, stats,a))
         . runWriterT
         . runWriterT
+        . flip runStateT initialStats
         . flip runStateT initialState
         . unPDP8

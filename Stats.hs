@@ -1,8 +1,12 @@
 module Stats
   ( renderStats
+  , incStats
   ) where
+
+import Arch
 import Parse
 import Types
+import Monad
 import qualified Data.Map as M
 
 renderStats :: Stats -> String
@@ -16,3 +20,9 @@ renderStats (Stats cy inst) =
   renderAll = unlines. map ("                 " ++) . map renderLn
   renderLn :: (PDPOp,Integer) -> String
   renderLn (o,i) = show o ++ " " ++ show i
+
+-- |Increment the instruction AND cylce count
+incStats :: Instr -> PDP8 ()
+incStats i@(Instr op _ _ _ _) = modStats f
+ where
+   f (Stats cy bd) = Stats (cy + nrCycles i) (M.insertWith (+) op 1 bd)
