@@ -42,6 +42,7 @@ lexer [l] = error $ "PDP8 object format should have an even number of lines, but
 lexer (a:b:is) = lexx a b : lexer is
 
 lexx :: String -> String -> Value
+lexx [] _ = error "Lexing expected a six digit octal number, but found an empty string."
 lexx (f:a) b 
   | isAddrFormat f = VAddr  . Addr        . readOct' . (a ++) . drop 1 $ b
   | otherwise      = VInstr . decodeInstr . readOct' . (a ++) . drop 1 $ b
