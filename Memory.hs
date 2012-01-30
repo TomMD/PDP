@@ -69,7 +69,7 @@ effectiveAddr i@(Instr _ _ (Just ZeroPage) (Just off) _) = do
       store (Addr off) (addr + 1) 
       return (Addr (addr+1))
     _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
-eAddr i@(Instr _ _ (Just CurrentPage) (Just off) _) = do
+effectiveAddr i@(Instr _ _ (Just CurrentPage) (Just off) _) = do
   pcAddr <- liftM (.&. ob 111110000000) getPC
   let eAddr = Addr (off .|. pcAddr)
   case addrMode i of
@@ -78,7 +78,7 @@ eAddr i@(Instr _ _ (Just CurrentPage) (Just off) _) = do
     ModeAutoIndexing -> error $ "addrMode is broken - autoindexing is not valid with the\ 
                               \ CurrentPage bit set.  Instruction code of " ++ (show $ instrCode i)
     _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
-eAddr _ = error "Can not compute the effective address of a non-memory operation.\
+effectiveAddr _ = error "Can not compute the effective address of a non-memory operation.\
                  \ The parser must have failed and resulted in an invalid AST for a\ 
                  \ given instruction."
 
