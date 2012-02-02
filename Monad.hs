@@ -7,12 +7,14 @@ module Monad
   , runPDP8
   , PDP8
     -- * Utilities
+  , reset
   , logMem
   , logBranch
   , getBranchLog, setBranchLog, modBranchLog
   , getMemoryLog, setMemoryLog, modMemoryLog
   , modMem, getMem, setMem
   , modStats, getStats, setStats
+  , getAC, setAC, modAC
   , getPC, setPC, modPC
   , getL, setL, modL
   , getSR, setSR, modSR
@@ -25,6 +27,9 @@ import Types
 
 newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats IO) a }
   deriving (MonadState MachineState, Monad)
+
+reset :: PDP8 ()
+reset = setStats initialStats >> put initialState
 
 logBranch :: Addr -> Addr -> PDP8 ()
 logBranch src target = 
