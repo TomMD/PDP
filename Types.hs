@@ -1,6 +1,6 @@
 module Types 
   ( -- * Aliases
-    Branches, MemoryLog, Int12, Memory
+    BranchLog, MemoryLog, Int12, Memory
     -- * Types
   , MachineState(..)
   , Purpose(..)
@@ -30,16 +30,18 @@ import Util
 
 -- |Branches are recorded as (address of the branching instruction,
 -- target address)
-type Branches = [(Addr,Addr)]
+type BranchLog = [(Addr,Addr)]
 type MemoryLog = [(Purpose,Addr)]
 
 -- The Stats needing tracked for the assignment
 data Stats =
   Stats { cycleCnt :: Integer
         , instrBreakdown :: M.Map PDPOp Integer
+        , branchLog :: BranchLog
+        , memoryLog :: MemoryLog
         }
 
-initialStats = Stats 0 M.empty
+initialStats = Stats 0 M.empty [] []
 
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)

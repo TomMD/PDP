@@ -1,6 +1,5 @@
 module Memory 
-  ( renderMemLog
-  , load, store, fetch
+  ( load, store, fetch
   , effectiveAddr
   , loadProgram
   )where
@@ -16,9 +15,6 @@ import Monad
 import Parse (decodeInstr, encodeInstr)
 import Types
 import Util
-
-renderMemLog :: MemoryLog -> String
-renderMemLog = unlines . map (\(p,a) -> show (fromEnum p) ++ " " ++ showOct (unAddr a) "" ++ "\n")
 
 -- Utilities --
 incPC :: PDP8 ()
