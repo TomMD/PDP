@@ -1,16 +1,14 @@
-module Parse 
+module Parse
   ( -- * Types
     Value(..)
   , Instr(..)
-  , PDPOps, Offset
-  , PDPOp(..)
+  , Offset
   , Indirection(..)
   , MemPage(..)
   , Addr(..)
   -- * The functions
   , parseObj
   , decodeInstr
-  , encodeInstr
   ) where
 
 import Data.Bits (shiftL, shiftR, testBit, (.&.), (.|.))
@@ -27,8 +25,8 @@ isInstr _          = False
 isAddr :: Value -> Bool
 isAddr = not . isInstr
 
-instr constr [] raw = Instr UnknownOp   Nothing Nothing Nothing raw
-instr constr xs raw = Instr (constr xs) Nothing Nothing Nothing raw
+-- instr constr [] raw = Instr UnknownOp   Nothing Nothing Nothing raw
+-- instr constr xs raw = Instr (constr xs) Nothing Nothing Nothing raw
 
 -- |Parse and ASCii obj file into an AST
 parseObj :: String -> [Value]
@@ -41,81 +39,59 @@ lexer [] = []
 lexer [l] = error $ "PDP8 object format should have an even number of lines, but there exists a lone trailing line of: " ++ l
 lexer (a:b:is) = lexx a b : lexer is
 
+-- Lexx is the most powerful destructive weapon in the two universes.
 lexx :: String -> String -> Value
 lexx [] _ = error "Lexing expected a six digit octal number, but found an empty string."
-lexx (f:a) b 
-  | isAddrFormat f = VAddr  . Addr        . readOct' . (a ++) . drop 1 $ b
-  | otherwise      = VInstr . decodeInstr . readOct' . (a ++) . drop 1 $ b
+lexx (f:a) b
+  | isAddrFormat f = VAddr  (Addr i)
+  | otherwise      = VInstr (decodeInstr i, i)
  where
    readOct' :: String -> Int12
    readOct' = fst . head. readOct
+   i = readOct' . (a ++) . drop 1 $ b
 
 isAddrFormat '1' = True
 isAddrFormat '0' = False
 isAddrFormat c   = error ("Invalid initial character in an OBJ line: " ++ show c)
 
-encodeInstr :: Instr -> Int12
-encodeInstr (Instr _ _ _ _ i) = i
-
 decodeInstr :: Int12 -> Instr
 decodeInstr i
-  | op >= 0 && op < 6 = decodeMemInstr op i
-  | op == 6           = decodeIOInstr i
-  | op == 7 && not (testBit i 8) = instr PDPOpMicro1 (decodeMicroInstr1 i) i
+  | op >= 0 && op < 6            = decodeMemInstr op i
+  | op == 6                      = decodeIOInstr i
+  | op == 7 && not (testBit i 8) = case decodeMicroInstr1 i of
+                                     Just i  -> i
+                                     Nothing -> UNK
   | op == 7 && testBit i 8
-            && testBit i 0       = instr PDPOpMicro2 (decodeMicroInstr2 i) i
+            && not (testBit i 0) = decodeMicroInstr2 i
   | op == 7 && testBit i 8
-            && testBit i 0       = instr PDPOpMicro3 (decodeMicroInstr3 i) i
-  | otherwise         = instr (const UnknownOp) [] i
+            && testBit i 0       = decodeMicroInstr3 i
+  | otherwise                    = UNK
  where
   op = ob 111 .&. (i `shiftR` 9)
 
 decodeMemInstr :: Int12 -> Int12 -> Instr
-decodeMemInstr op i = Instr (PDPOpMem . toEnum . fromIntegral $ op) (Just ind) (Just mempg) (Just off) i
+decodeMemInstr op i = opCon op ind mempg off
  where
+ opCon 0 = AND
+ opCon 1 = TAD
+ opCon 2 = ISZ
+ opCon 3 = DCA
+ opCon 4 = JMS
+ opCon 5 = JMP
+
  ind   = if testBit i 8 then Indirect else Direct
  mempg = if testBit i 7 then CurrentPage else ZeroPage
  off   = i .&. ob 1111111
 
-decodeMicro :: [(Int12,a)] -> Int12 -> [a]
-decodeMicro masks i
-  = map snd
-  . filter ((\code -> (i .&. code) == code) . fst)
-  $ masks
-
--- Micro instrs
-decodeMicroInstr1 :: Int12 -> [MicroOp1]
-decodeMicroInstr1 = decodeMicro microOp1Masks
-
-decodeMicroInstr2 :: Int12 -> [MicroOp2]
-decodeMicroInstr2 = decodeMicro microOp2Masks
-
-decodeMicroInstr3 :: Int12 -> [MicroOp3]
-decodeMicroInstr3 = decodeMicro microOp3Masks
-
--- Group 1
-microOp1Masks :: [(Int12,MicroOp1)]
-microOp1Masks =
-  [(oct 7000, NOP), (oct 7200, CLA1), (oct 7100, CLL), (oct 7040, CMA), (oct 7020, CML),
-   (oct 7001, IAC), (oct 7010, RAR), (oct 7012, RTR), (oct 7004, RAL), (oct 7006, RTL)]
-
--- Group 2 micro instrs
-microOp2Masks :: [(Int12,MicroOp2)]
-microOp2Masks =
-  [(oct 7500, SMA), (oct 7440, SZA), (oct 7420, SNL), (oct 7510, SPA), (oct 7450, SNA),
-   (oct 7430, SZL), (oct 7410, SKP), (oct 7600, CLA2), (oct 7404, OSR), (oct 7402, HLT)]
-
--- Group 3 micro instrs
-microOp3Masks :: [(Int12,MicroOp3)]
-microOp3Masks =
-  [(oct 7601, CLA3), (oct 7421, MQL), (oct 7501, MQA), (oct 7521, SWP), (oct 7621, CAM)]
+decodeMicro :: [(Int,a)] -> Int12 -> (Bool, [a])
+decodeMicro masks i = (testBit i 7, map snd (filter (\(bit, _) -> testBit i bit) masks))
 
 decodeIOInstr :: Int12 -> Instr
 decodeIOInstr i 
-  = Instr (PDPOpIO op) Nothing Nothing Nothing i
+  = IOT op
  where
  op
-  | i == oct 6030 = KCF  -- What, no KFC?!?!
+  | i == oct 6030 = KCF
   | i == oct 6031 = KSF
   | i == oct 6032 = KCC
   | i == oct 6034 = KRS
@@ -125,3 +101,25 @@ decodeIOInstr i
   | i == oct 6042 = TCF
   | i == oct 6044 = TPC
   | i == oct 6046 = TLS
+
+decodeMicroInstr1 :: Int12 -> Maybe Instr
+decodeMicroInstr1 i = case (testBit i 3, testBit i 2, testBit i 1) of
+                        (True, False, b)  -> Just (OP1 cla ops (if b then Just RTR else Just RAR))
+                        (False, True, b)  -> Just (OP1 cla ops (if b then Just RTL else Just RAL))
+                        (False, False, b) -> Just (OP1 cla ops (if b then Just BSW else Nothing))
+                        _                 -> Nothing
+    where (cla, ops) = decodeMicro microOp1Masks i
+
+decodeMicroInstr2 :: Int12 -> Instr
+decodeMicroInstr2 i = OP2 cla (testBit i 3) skips micros
+    where (cla, skips) = decodeMicro skipOpMasks i
+          (_, micros) = decodeMicro microOp2Masks i
+
+decodeMicroInstr3 :: Int12 -> Instr
+decodeMicroInstr3 i = OP3 cla ops
+    where (cla, ops) = decodeMicro microOp3Masks i
+
+microOp1Masks = [(6, CLL), (5, CMA), (4, CML), (0, IAC)]
+skipOpMasks = [(6, SMA), (5, SZA), (4, SNL)]
+microOp2Masks = [(2, OSR), (1, HLT)]
+microOp3Masks = [(7, MQA), (5, MQL)]

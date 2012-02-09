@@ -1,4 +1,4 @@
-module Types 
+module Types
   ( -- * Aliases
     BranchLog, MemoryLog, Int12, Memory
     -- * Types
@@ -8,19 +8,20 @@ module Types
     -- * ISR Types
   , Value(..)
   , Instr(..)
-  , PDPOp(..)
-  , PDPOps
-  , IOOp(..)
+  , InstructionType(..)
   , MicroOp1(..)
+  , LogicalOp(..)
   , MicroOp2(..)
+  , SkipOp(..)
   , MicroOp3(..)
+  , IOOp(..)
   , Indirection(..)
   , MemPage(..)
   , Addr(..)
   , Offset
     -- * Helpers
   , initialState, initialMemory, initialStats
-  , opIsMem, opIsIO, opIsMicro) where
+  , typeOf ) where
 
 import qualified Data.Map as M
 import Data.Bits
@@ -36,7 +37,7 @@ type MemoryLog = [(Purpose,Addr)]
 -- The Stats needing tracked for the assignment
 data Stats =
   Stats { cycleCnt :: Integer
-        , instrBreakdown :: M.Map PDPOp Integer
+        , instrBreakdown :: M.Map InstructionType Integer
         , branchLog :: BranchLog
         , memoryLog :: MemoryLog
         }
@@ -60,104 +61,89 @@ data Purpose = DataRead | DataWrite | InstrFetch
 initialState  = MS 0 0 0 0 0 initialMemory
 initialMemory = M.empty
 
-data Value = VInstr { vInstr :: Instr } | VAddr { vAddr :: Addr }
+data Value = VInstr { vInstr :: (Instr, Int12) } | VAddr { vAddr :: Addr }
   deriving (Eq, Ord, Show)
 
 type Offset = Int12
 
 -- |The 'Instr'uncation data type carries the decoded op, indirection,
--- memory page flags, and offset if applicable, and the raw integer
--- that was decoded.
-data Instr = Instr 
-  { instrOp          :: PDPOp
-  , instrIndirection :: (Maybe Indirection)
-  , instrMemPage     :: (Maybe MemPage)
-  , instrOffset      :: (Maybe Offset)
-  , instrCode        :: Int12 }
+-- memory page flags, and offset if applicable.
+data Instr = AND { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           | TAD { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           | ISZ { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           | DCA { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           | JMS { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           | JMP { indirection :: Indirection
+                 , page :: MemPage
+                 , offset :: Offset }
+           -- IO Ops
+           | IOT IOOp
+           -- End IO Ops
+           | OP1 { cla :: Bool
+                 , micros1 :: [MicroOp1]
+                 , logical :: Maybe LogicalOp }
+           | OP2 { cla :: Bool
+                 , invertAndUnion :: Bool
+                 , skips :: [SkipOp]
+                 , micros2 :: [MicroOp2] }
+           | OP3 { cla :: Bool
+                 , micros3 :: [MicroOp3] }
+           | UNK
+           deriving (Eq, Ord, Show)
+
+data IOOp  = KCF
+           | KSF
+           | KCC
+           | KRS
+           | KRB
+           | TFL
+           | TSF
+           | TCF
+           | TPC
+           | TLS
   deriving (Eq, Ord, Show)
 
-type PDPOps = [PDPOp]
-data PDPOp = PDPOpMem MemOp
-           | PDPOpIO IOOp 
-           | PDPOpMicro1 [MicroOp1]
-           | PDPOpMicro2 [MicroOp2]
-           | PDPOpMicro3 [MicroOp3]
-           | UnknownOp
-  deriving (Eq, Ord, Show)
+data InstructionType = MemOp | IOOp | MicroOp1 | MicroOp2 | MicroOp3 | UnknownOp
+                     deriving (Eq, Ord, Show)
 
-opIsMem :: PDPOp -> Bool
-opIsMem (PDPOpMem _) = True
-opIsMem _            = False
-
-opIsIO :: PDPOp -> Bool
-opIsIO (PDPOpIO _) = True
-opIsIO _           = False
-
-opIsMicro :: PDPOp -> Bool
-opIsMicro (PDPOpMicro1 _) = True
-opIsMicro (PDPOpMicro2 _) = True
-opIsMicro (PDPOpMicro3 _) = True
-opIsMicro _               = False
-
-data MemOp
-  = AND  -- Logical and
-  | TAD  -- two's comp add
-  | ISZ  -- Increment memory and inc PC if zero
-  | DCA  -- store acc to memory and clear acc
-  | JMS  -- store PC to addr, read new pc from addr + 1
-  | JMP  -- read new pc from addr
-  deriving (Eq, Ord, Show, Enum)
-
-data IOOp
-  = KCF
-  | KSF
-  | KCC
-  | KRS
-  | KRB
-  | TFL
-  | TSF
-  | TCF
-  | TPC
-  | TLS
-  -- TOO MANY TLAs!!!
-  deriving (Eq, Ord, Show, Enum)
+typeOf (IOT {}) = IOOp
+typeOf (OP1 {}) = MicroOp1
+typeOf (OP2 {}) = MicroOp2
+typeOf (OP3 {}) = MicroOp3
+typeOf _        = MemOp
 
 data MicroOp1 =
   -- Microcodes
-    NOP
-  | CLA1
-  | CLL
-  | CMA
-  | CML
-  | IAC
-  | RAR
-  | RTR
-  | RAL
-  | RTL
-  deriving (Eq, Ord, Show, Enum)
+    CLL | CMA | CML | IAC
+    deriving (Eq, Ord, Show)
+
+data LogicalOp =
+    RAR | RTR | RAL | RTL | BSW
+    deriving (Eq, Ord, Show)
+
+data SkipOp =
+    SMA | SZA | SNL
+    deriving (Eq, Ord, Show)
 
 data MicroOp2 =
   -- Group 2
-    SMA
-  | SZA
-  | SNL
-  | SPA
-  | SNA
-  | SZL
-  | SKP
-  | CLA2
-  | OSR
-  | HLT
-  deriving (Eq, Ord, Show, Enum)
+    OSR | HLT
+    deriving (Eq, Ord, Show)
 
 data MicroOp3 =
   -- Group 3
-    CLA3
-  | MQL
-  | MQA
-  | SWP
-  | CAM
-  deriving (Eq, Ord, Show, Enum)
+    MQL | MQA
+    deriving (Eq, Ord, Show)
 
 data Indirection = Direct | Indirect
   deriving (Eq, Ord, Show)

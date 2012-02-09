@@ -14,18 +14,18 @@ import Util
 
 -- FIXME put any constants here!  Constants such as the auto-increment values.
 
-nrCyclesOp :: Integral a => PDPOp -> a
-nrCyclesOp o
-  | opIsMem o          = 2
-  | opIsIO o           = 0
-  | opIsMicro o        = 1
-  | otherwise          = 0 --Unknown ops
+nrCyclesOp :: Integral a => InstructionType -> a
+nrCyclesOp MemOp     = 2
+nrCyclesOp IOOp      = 0
+nrCyclesOp UnknownOp = 0
+nrCyclesOp _         = 1 -- micro ops
 
 nrCycles :: Integral a => Instr -> a
-nrCycles instr@(Instr op _ _ _ _)
-  | addrModeAutoIndexing instr = 2 + nrCyclesOp op
-  | addrModeIndirect instr     = 1 + nrCyclesOp op
-  | otherwise                  =     nrCyclesOp op
+nrCycles i =
+    case typeOf i of
+      MemOp | addrModeAutoIndexing i -> 2 + nrCyclesOp MemOp
+            | addrModeIndirect i     -> 1 + nrCyclesOp MemOp
+      t                              -> nrCyclesOp t
 
 addrModeIndirect :: Instr -> Bool
 addrModeIndirect = (== ModeIndirect) . addrMode
@@ -40,8 +40,10 @@ data AddrMode = ModeIndirect | ModeDirect | ModeAutoIndexing | NonMemoryOperatio
               deriving (Eq, Ord, Show)
 
 addrMode :: Instr -> AddrMode
-addrMode (Instr op (Just Indirect) (Just m) (Just o) _)
-  | o >= oct 10 && o <= oct 17 && m == ZeroPage = ModeAutoIndexing
-  | otherwise = ModeIndirect
-addrMode (Instr op (Just Direct) _ _ _) = ModeDirect
-addrMode _ = NonMemoryOperation
+addrMode i =
+    case typeOf i of
+      MemOp -> case indirection i of
+                 Indirect | page i == ZeroPage && offset i >= oct 10 && offset i <= oct 17 -> ModeAutoIndexing
+                          | otherwise                                                      -> ModeIndirect
+                 Direct                                                                    -> ModeDirect
+      _     -> NonMemoryOperation

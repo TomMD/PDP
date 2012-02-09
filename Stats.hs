@@ -15,7 +15,7 @@ import qualified Data.Map as M
 import Numeric
 
 renderLogs :: Stats -> String
-renderLogs s = 
+renderLogs s =
   unlines [ renderMemoryLog (memoryLog s)
           , renderBranchLog (branchLog s)
           ]
@@ -37,13 +37,13 @@ renderStats (Stats cy inst bl ml) =
      "Total cycles:       " ++ show cy ++
      "Breakdown:          " ++ renderAll (M.toList inst)
  where
-  renderAll :: [(PDPOp,Integer)] -> String
+  renderAll :: [(InstructionType,Integer)] -> String
   renderAll = unlines. map ("                 " ++) . map renderLn
-  renderLn :: (PDPOp,Integer) -> String
+  renderLn :: (InstructionType,Integer) -> String
   renderLn (o,i) = show o ++ " " ++ show i
 
 -- |Increment the instruction AND cylce count
 incStats :: Instr -> PDP8 ()
-incStats i@(Instr op _ _ _ _) = modStats f
+incStats i = modStats f
  where
-   f (Stats cy bd x y) = Stats (cy + nrCycles i) (M.insertWith (+) op 1 bd) x y
+   f (Stats cy bd x y) = Stats (cy + nrCycles i) (M.insertWith (+) (typeOf i) 1 bd) x y
