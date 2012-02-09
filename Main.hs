@@ -17,7 +17,6 @@ import Control.Monad.Trans.Class (lift)
 import Data.Char (toLower, isDigit, isSpace, isAlpha)
 import Data.List
 import Numeric
-import qualified System.Console.Haskeline as H
 import System.Console.Haskeline.Class
 import qualified Data.Map as M
 
@@ -36,7 +35,7 @@ prompt = "\n> "
 
 main 
   = runPDP8
-  . runHaskelineT H.defaultSettings
+  . runHaskelineT defaultSettings
   . flip runStateT noDebug
   $ loop
 
@@ -58,6 +57,7 @@ loop = do
     processCmd "run" = run >> return False
     processCmd i | "show " `isPrefixOf` i = do
       parseGetter (drop 5 i) >> rt
+    processCmd "cleardebug" = modify (const noDebug) >> rt
     processCmd i | "debug " `isPrefixOf` i = do
       let op = parseGetter (drop 6 i)
       modify (\s -> DS $ unDS s >> outputStr (i ++ ": ") >> op)
@@ -71,12 +71,32 @@ loop = do
     processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
       rt
+    processCmd "help" = do
+      outputStrLn $ unlines
+        [ "PDP8 Interpreter (by Thomas DuBuisson & Garrett Morris)"
+        , "Commands:"
+        , "\tstep [n]          Step 1 (or a given number) of instructions."
+        , "\trun               Run until termination"
+        , "\tshow <loc>        Show a particular location's value"
+        , "\tset <loc>         Set the value of a particular location"
+        , "\tload <file>       Load an octal .obj file"
+        , "\tdebug <loc>       Each step, print the value at <location>"
+        , "\tcleardebug        Don't print any value on each step"
+        , "-----------"
+        , "Locations:"
+        , "\tstats             Statistics (not settable!)"
+        , "\tlogs              Log files  (not settable!)"
+        , "\tmem               Memory (set with 'set mem <octAddr> <oct>')"
+        , "\t<reg>             Register (pc,ac,l,sr,ir,cpma,mb)"
+        ]
+      rt
+
 
 whenM :: Monad m => m Bool -> m () -> m ()
 whenM b f = b >>= \x -> if x then f else return ()
 
 run :: MonadCLI ()
-run = whenM (lift2 step) run
+run = whenM doStep run
 
 parseNum :: String -> Int
 parseNum = read . ('0':) . filter isDigit
@@ -109,18 +129,16 @@ setVal str =
     "ir"  -> lift2 . setIR $ valO
 
 doStep :: MonadCLI Bool
-doStep = lift2 step
+doStep = do
+  h <- lift2 isHalted
+  if h then return False
+    else do b <- lift2 step
+            s <- get
+            unDS s
+            lift2 isHalted
 
 prnt :: (Show a) => a -> MonadCLI ()
 prnt = outputStrLn . show
-
-{-
-instance MonadHaskeline MonadCLI where
-  getInputLine = lift . getInputLine
-  getInputChar = lift . getInputChar
-  outputStr = lift . outputStr
-  outputStrLn = lift . outputStrLn
-  -}
 
 instance MonadException PDP8 where
   catch m h = PDP8 $ catch (unPDP8 m) 
