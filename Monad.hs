@@ -75,7 +75,7 @@ getStats = PDP8 (lift get)
 setStats :: Stats -> PDP8 ()
 setStats = PDP8 . lift . put
 
-getPC, getSR, getAC, getCPMA, getMB :: PDP8 Int12
+getPC, getSR, getAC, getIR, getCPMA, getMB :: PDP8 Int12
 getPC   = gets pc
 getSR   = gets sr
 getAC   = gets ac
@@ -99,8 +99,13 @@ setIR x   = modIR (const x)
 setCPMA x = modCPMA (const x)
 setMB x   = modMB (const x)
 
+getL :: PDP8 Int
 getL   = gets lb
+
+setL :: Int -> PDP8 ()
 setL x = get >>= \s -> put s { lb = x }
+
+modL :: (Int -> Int) -> PDP8 ()
 modL f = getL >>= setL . f
 
 evalPDP8 :: PDP8 a -> IO a
