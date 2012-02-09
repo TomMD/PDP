@@ -1,5 +1,5 @@
 module Memory
-  ( load, store, fetch
+  ( load, store, fetchInstruction
   , effectiveAddr
   , loadProgram
   )where
@@ -38,12 +38,11 @@ store a i =
 
 -- |Fetch and decode an instruction from a memory address
 -- Increments the PC and stores the latest instruction in the IR
-fetch :: Addr -> PDP8 Instr
-fetch a = do
+fetchInstruction :: Addr -> PDP8 Instr
+fetchInstruction a = do
   logMem InstrFetch a
   rawInstr <- gets (M.findWithDefault 0 a . mem)
   setIR rawInstr
-  incPC
   return (decodeInstr rawInstr)
 
 -- |Given the newly fetched instruction, which must be a memory
