@@ -87,7 +87,7 @@ decodeMicro :: [(Int,a)] -> Int12 -> (Bool, [a])
 decodeMicro masks i = (testBit i 7, map snd (filter (\(bit, _) -> testBit i bit) masks))
 
 decodeIOInstr :: Int12 -> Instr
-decodeIOInstr i 
+decodeIOInstr i
   = IOT op
  where
  op
@@ -116,7 +116,8 @@ decodeMicroInstr2 i = OP2 cla (testBit i 3) skips micros
           (_, micros) = decodeMicro microOp2Masks i
 
 decodeMicroInstr3 :: Int12 -> Instr
-decodeMicroInstr3 i = OP3 cla ops
+decodeMicroInstr3 i | MQL `elem` ops && MQA `elem` ops = UNK
+                    | otherwise                        = OP3 cla ops
     where (cla, ops) = decodeMicro microOp3Masks i
 
 microOp1Masks = [(6, CLL), (5, CMA), (4, CML), (0, IAC)]
