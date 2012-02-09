@@ -49,6 +49,7 @@ initialStats = Stats 0 M.empty [] []
 data MachineState =
   MS { pc,sr,ac,ir  :: Int12
      , lb           :: Int -- 1 bit
+     , cpma, mb     :: Int32
      , mem          :: Memory
      } deriving (Eq, Ord, Show)
 

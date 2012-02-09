@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Monad 
+module Monad
   ( -- * Monad Execution
     evalPDP8
   , logPDP8
@@ -33,7 +33,7 @@ reset :: PDP8 ()
 reset = setStats initialStats >> put initialState
 
 logBranch :: Addr -> Addr -> PDP8 ()
-logBranch src target = 
+logBranch src target =
   modBranchLog (++ [(src,target)])
 
 logMem :: Purpose -> Addr -> PDP8 ()
@@ -75,28 +75,32 @@ getStats = PDP8 (lift get)
 setStats :: Stats -> PDP8 ()
 setStats = PDP8 . lift . put
 
-getPC, getSR, getAC, getIR :: PDP8 Int12
+getPC, getSR, getAC, getCPMA, getMB :: PDP8 Int12
 getPC   = gets pc
 getSR   = gets sr
 getAC   = gets ac
 getIR   = gets ir
+getCPMA = gets cpma
+getMB   = gets mb
 
-setPC, setSR, setAC, setIR :: Int12 -> PDP8 ()
-setPC x = get >>= \s -> put s { pc = x }
-setSR x = get >>= \s -> put s { sr = x }
-setAC x = get >>= \s -> put s { ac = x }
-setIR x = get >>= \s -> put s { ir = x }
+modPC, modSR, modAC, modCPMA, modMB :: (Int12 -> Int12) -> PDP8 ()
+modPC f   = modify (\s -> s { pc = f (pc s) })
+modSR f   = modify (\s -> s { sr = f (sr s) })
+modAC f   = modify (\s -> s { ac = f (ac s) })
+modIR f   = modify (\s -> s { ir = f (ir s) })
+modCPMA f = modify (\s -> s { cpma = f (cpma s) })
+modMB f   = modify (\s -> s { mb = f (mb s) })
 
-modPC, modSR, modAC :: (Int12 -> Int12) -> PDP8 ()
-modPC f = getPC >>= setPC . f
-modSR f = getSR >>= setSR . f
-modAC f = getAC >>= setAC . f
-modIR f = getIR >>= setIR . f
+setPC, setSR, setAC, setCPMA, setMB :: Int12 -> PDP8 ()
+setPC x   = modPC (const x)
+setSR x   = modSR (const x)
+setAC x   = modAC (const x)
+setIR x   = modIR (const x)
+setCPMA x = modCPMA (const x)
+setMB x   = modMB (const x)
 
 getL   = gets lb
 setL x = get >>= \s -> put s { lb = x }
-
-modL :: (Int -> Int) -> PDP8 ()
 modL f = getL >>= setL . f
 
 evalPDP8 :: PDP8 a -> IO a
