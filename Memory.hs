@@ -48,12 +48,8 @@ fetchInstruction a = do
 -- |Given the newly fetched instruction, which must be a memory
 -- operation, returns the effective address while performing any
 -- needed auto-incrementing (costing an additional load and store - correct? TODO CHECKME).
---
--- FIXME This should be called before (I think) incrementing the PC??
--- Probably before!  check the behavior of a PDP8 in the
--- documentation!
-effectiveAddr :: Instr -> PDP8 Addr
-effectiveAddr i =
+effectiveAddr :: Instr -> Int12 -> PDP8 Addr
+effectiveAddr i iaddr =
     case typeOf i of
       MemOp -> effectiveAddr' (page i) (offset i) (addrMode i)
       _ -> error "Can not compute the effective address of a non-memory operation.\
@@ -62,18 +58,16 @@ effectiveAddr i =
     where effectiveAddr' ZeroPage off ModeIndirect =
               liftM Addr (load (Addr off))
           effectiveAddr' ZeroPage off ModeDirect =
-              do pcAddr <- getPC
-                 let ea = (pcAddr .&. ob 111110000000) .|. off
-                 return (Addr ea)
+              let ea = (iaddr .&. ob 111110000000) .|. off
+              in return (Addr ea)
           effectiveAddr' ZeroPage off ModeAutoIndexing =
               do let ptr = Addr off
                  addr <- load ptr
                  store (Addr off) (addr + 1)
                  return (Addr (addr+1))
           effectiveAddr' CurrentPage off mode =
-              do pcAddr <- liftM (.&. ob 111110000000) getPC
-                 let eAddr = Addr (off .|. pcAddr)
-                 case mode of
+              let eAddr = Addr (off .|. iaddr .&. ob 111110000000)
+              in case mode of
                    ModeIndirect -> liftM Addr (load eAddr)
                    ModeDirect   -> return eAddr
                    ModeAutoIndexing -> error "addrMode is broken - autoindexing is not valid with the CurrentPage bit set."
