@@ -31,7 +31,7 @@ import Control.Monad.Writer
 import Types
 
 newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats IO) a }
-  deriving (MonadState MachineState, Monad)
+  deriving (MonadState MachineState, Monad, Functor)
 
 clearHalt, halt :: PDP8 ()
 halt      = modify (\s -> s { halted = True  })
