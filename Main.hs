@@ -29,13 +29,12 @@ type MonadCLI a = StateT DebugOp PDP8 a
 
 -- However many liftings are needed for the PDP8 monad
 -- embedded in MonadCLI
-lift2 = lift . lift
+lift2 = lift
 
 prompt = "\n> "
 
 main 
   = runPDP8
-  . runHaskelineT defaultSettings
   . flip runStateT noDebug
   $ loop
 
@@ -44,34 +43,37 @@ loop = do
   i <- getInputLine prompt
   case i of
     Just ln -> do
-      b <- processCmd ln
+      b <- process ln
       when b loop
     Nothing -> loop
   where 
-    rt = return True :: MonadCLI Bool
-    processCmd :: String -> MonadCLI Bool
-    processCmd i | "step" `isPrefixOf` i = do
+    process :: String -> MonadCLI Bool
+    process "quit" = return False
+    process s = do
+      processCmd s
+      b <- lift2 isHalted
+      when b (outputStrLn "Program HALTed")
+      return True
+      
+processCmd :: String -> MonadCLI ()
+processCmd i | "step" `isPrefixOf` i = do
       let nr = parseNum (drop 4 i)
-      xs <- replicateM nr doStep
-      return (and xs)
-    processCmd "run" = run >> return False
-    processCmd i | "show " `isPrefixOf` i = do
-      parseGetter (drop 5 i) >> rt
-    processCmd "cleardebug" = modify (const noDebug) >> rt
-    processCmd i | "debug " `isPrefixOf` i = do
+      replicateM_ nr doStep
+processCmd "run" = run
+processCmd i | "show " `isPrefixOf` i = do
+      parseGetter (drop 5 i)
+processCmd "cleardebug" = modify (const noDebug)
+processCmd i | "debug " `isPrefixOf` i = do
       let op = parseGetter (drop 6 i)
       modify (\s -> DS $ unDS s >> outputStr (i ++ ": ") >> op)
-      rt
-    processCmd i | "load " `isPrefixOf` i = do
+processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
       lift2 reset
       cont <- liftIO (readFile f)
       lift2 $ loadProgram (parseObj cont)
-      rt
-    processCmd i | "set " `isPrefixOf` i = do
+processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
-      rt
-    processCmd "help" = do
+processCmd "help" = do
       outputStrLn $ unlines
         [ "PDP8 Interpreter (by Thomas DuBuisson & Garrett Morris)"
         , "Commands:"
@@ -89,7 +91,6 @@ loop = do
         , "\tmem               Memory (set with 'set mem <octAddr> <oct>')"
         , "\t<reg>             Register (pc,ac,l,sr,ir,cpma,mb)"
         ]
-      rt
 
 
 whenM :: Monad m => m Bool -> m () -> m ()
@@ -140,14 +141,5 @@ doStep = do
 prnt :: (Show a) => a -> MonadCLI ()
 prnt = outputStrLn . show
 
-instance MonadException PDP8 where
-  catch m h = PDP8 $ catch (unPDP8 m) 
-                           (\e -> unPDP8 (h e))
-  block = PDP8 . block . unPDP8
-  unblock = PDP8 . unblock . unPDP8
-  
-instance MonadIO PDP8 where
-  liftIO = PDP8 . liftIO
-  
 readO :: (Read a, Integral a) => String -> a
 readO = fst . head . readOct
