@@ -50,6 +50,7 @@ data MachineState =
   MS { pc,sr,ac,ir  :: Int12
      , lb           :: Int -- 1 bit
      , cpma, mb     :: Int12
+     , mq           :: Int12
      , mem          :: Memory
      , halted       :: Bool
      } deriving (Eq, Ord, Show)
@@ -60,7 +61,7 @@ type Memory = M.Map Addr Int12
 data Purpose = DataRead | DataWrite | InstrFetch
   deriving (Eq, Ord, Show, Enum)
 
-initialState  = MS 0 0 0 0 0 0 0 initialMemory False
+initialState  = MS 0 0 0 0 0 0 0 0 initialMemory False
 initialMemory = M.empty
 
 data Value = VInstr { vInstr :: (Instr, Int12) } | VAddr { vAddr :: Addr }
