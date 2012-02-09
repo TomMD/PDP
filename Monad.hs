@@ -19,6 +19,9 @@ module Monad
   , getL, setL, modL
   , getSR, setSR, modSR
   , getIR, setIR, modIR
+  , getCPMA, setCPMA, modCPMA
+  , getMB, setMB, modMB
+  , clearHalt, halt, isHalted
   ) where
 
 import Control.Monad.State
@@ -28,6 +31,13 @@ import Types
 
 newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats IO) a }
   deriving (MonadState MachineState, Monad)
+
+clearHalt, halt :: PDP8 ()
+halt      = modify (\s -> s { halted = True  })
+clearHalt = modify (\s -> s { halted = False })
+
+isHalted :: PDP8 Bool
+isHalted  = gets halted
 
 reset :: PDP8 ()
 reset = setStats initialStats >> put initialState

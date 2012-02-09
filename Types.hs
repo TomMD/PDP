@@ -51,6 +51,7 @@ data MachineState =
      , lb           :: Int -- 1 bit
      , cpma, mb     :: Int12
      , mem          :: Memory
+     , halted       :: Bool
      } deriving (Eq, Ord, Show)
 
 -- The machine memory associates addresses to integers
@@ -59,7 +60,7 @@ type Memory = M.Map Addr Int12
 data Purpose = DataRead | DataWrite | InstrFetch
   deriving (Eq, Ord, Show, Enum)
 
-initialState  = MS 0 0 0 0 0 0 0 initialMemory
+initialState  = MS 0 0 0 0 0 0 0 initialMemory False
 initialMemory = M.empty
 
 data Value = VInstr { vInstr :: (Instr, Int12) } | VAddr { vAddr :: Addr }
@@ -173,7 +174,7 @@ instance Read Int12 where
   readsPrec _ o = [(fromIntegral i,s) | (i,s) <- readOct o]
 
 modOp12 op (Int12 a) (Int12 b) =
-  let res = a `op` b
+  let res = (a `op` b) `mod` 2^12
   in if res < (-2^11)
       then Int12 (res + 2^12)
       else if res > (2^11 - 1)
