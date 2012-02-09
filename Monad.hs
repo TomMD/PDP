@@ -5,7 +5,7 @@ module Monad
   , logPDP8
   , execPDP8
   , runPDP8
-  , PDP8
+  , PDP8(..)
     -- * Utilities
   , reset
   , logMem
@@ -18,6 +18,7 @@ module Monad
   , getPC, setPC, modPC
   , getL, setL, modL
   , getSR, setSR, modSR
+  , getIR, setIR, modIR
   ) where
 
 import Control.Monad.State
@@ -74,20 +75,23 @@ getStats = PDP8 (lift get)
 setStats :: Stats -> PDP8 ()
 setStats = PDP8 . lift . put
 
-getPC, getSR, getAC :: PDP8 Int12
+getPC, getSR, getAC, getIR :: PDP8 Int12
 getPC   = gets pc
 getSR   = gets sr
 getAC   = gets ac
+getIR   = gets ir
 
-setPC, setSR, setAC :: Int12 -> PDP8 ()
+setPC, setSR, setAC, setIR :: Int12 -> PDP8 ()
 setPC x = get >>= \s -> put s { pc = x }
 setSR x = get >>= \s -> put s { sr = x }
 setAC x = get >>= \s -> put s { ac = x }
+setIR x = get >>= \s -> put s { ir = x }
 
 modPC, modSR, modAC :: (Int12 -> Int12) -> PDP8 ()
 modPC f = getPC >>= setPC . f
 modSR f = getSR >>= setSR . f
 modAC f = getAC >>= setAC . f
+modIR f = getIR >>= setIR . f
 
 getL   = gets lb
 setL x = get >>= \s -> put s { lb = x }

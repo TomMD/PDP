@@ -37,12 +37,14 @@ store a i =
   modMem (M.insert a i)
 
 -- |Fetch and decode an instruction from a memory address
+-- Increments the PC and stores the latest instruction in the IR
 fetch :: Addr -> PDP8 Instr
 fetch a = do
   logMem InstrFetch a
-  i <- gets (decodeInstr. M.findWithDefault 0 a . mem)
+  rawInstr <- gets (M.findWithDefault 0 a . mem)
+  setIR rawInstr
   incPC
-  return i
+  return (decodeInstr rawInstr)
 
 -- |Given the newly fetched instruction, which must be a memory
 -- operation, returns the effective address while performing any
