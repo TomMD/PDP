@@ -1,4 +1,4 @@
-module Memory 
+module Memory
   ( load, store, fetch
   , effectiveAddr
   , loadProgram
@@ -12,7 +12,7 @@ import Control.Monad (liftM)
 
 import Arch (addrMode, AddrMode(..))
 import Monad
-import Parse (decodeInstr, encodeInstr)
+import Parse (decodeInstr)
 import Types
 import Util
 
@@ -33,7 +33,7 @@ load a =
 -- |Store a 'Int12' at a given memory address
 store :: Addr -> Int12 -> PDP8 ()
 store a i =
-  logMem DataWrite a >> 
+  logMem DataWrite a >>
   modMem (M.insert a i)
 
 -- |Fetch and decode an instruction from a memory address
@@ -52,31 +52,30 @@ fetch a = do
 -- Probably before!  check the behavior of a PDP8 in the
 -- documentation!
 effectiveAddr :: Instr -> PDP8 Addr
-effectiveAddr i@(Instr _ _ (Just ZeroPage) (Just off) _) = do
-  case addrMode i of
-    ModeIndirect -> liftM Addr (load (Addr off))
-    ModeDirect   -> do
-      pcAddr <- getPC
-      let ea = (pcAddr .&. ob 111110000000) .|. off
-      return (Addr ea)
-    ModeAutoIndexing -> do
-      let ptr = Addr off
-      addr <- load ptr
-      store (Addr off) (addr + 1) 
-      return (Addr (addr+1))
-    _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
-effectiveAddr i@(Instr _ _ (Just CurrentPage) (Just off) _) = do
-  pcAddr <- liftM (.&. ob 111110000000) getPC
-  let eAddr = Addr (off .|. pcAddr)
-  case addrMode i of
-    ModeIndirect -> liftM Addr (load eAddr)
-    ModeDirect   -> return eAddr
-    ModeAutoIndexing -> error $ "addrMode is broken - autoindexing is not valid with the\ 
-                              \ CurrentPage bit set.  Instruction code of " ++ (show $ instrCode i)
-    _ -> error $ "Invalid addressing mode for memory instruction of " ++ (show $ instrCode i)
-effectiveAddr _ = error "Can not compute the effective address of a non-memory operation.\
-                 \ The parser must have failed and resulted in an invalid AST for a\ 
+effectiveAddr i =
+    case typeOf i of
+      MemOp -> effectiveAddr' (page i) (offset i) (addrMode i)
+      _ -> error "Can not compute the effective address of a non-memory operation.\
+                 \ The parser must have failed and resulted in an invalid AST for a\
                  \ given instruction."
+    where effectiveAddr' ZeroPage off ModeIndirect =
+              liftM Addr (load (Addr off))
+          effectiveAddr' ZeroPage off ModeDirect =
+              do pcAddr <- getPC
+                 let ea = (pcAddr .&. ob 111110000000) .|. off
+                 return (Addr ea)
+          effectiveAddr' ZeroPage off ModeAutoIndexing =
+              do let ptr = Addr off
+                 addr <- load ptr
+                 store (Addr off) (addr + 1)
+                 return (Addr (addr+1))
+          effectiveAddr' CurrentPage off mode =
+              do pcAddr <- liftM (.&. ob 111110000000) getPC
+                 let eAddr = Addr (off .|. pcAddr)
+                 case mode of
+                   ModeIndirect -> liftM Addr (load eAddr)
+                   ModeDirect   -> return eAddr
+                   ModeAutoIndexing -> error "addrMode is broken - autoindexing is not valid with the CurrentPage bit set."
 
 -- |Given a list of values produced by parseObj, load the data into
 -- memory. N.B. 'loadProgram' won't adjust the memory access counters!
@@ -85,8 +84,8 @@ loadProgram values = go (Addr 0) values
  where
    go a []     = return ()
    go _ (VAddr a  : vs) = go a vs
-   go a (VInstr i : vs) = do
-     modMem (M.insert a (encodeInstr i))
+   go a (VInstr (_,i) : vs) = do
+     modMem (M.insert a i)
      go (incrAddr a) vs
    incrAddr = Addr . (+1) . unAddr
 
