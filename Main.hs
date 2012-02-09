@@ -97,7 +97,7 @@ whenM :: Monad m => m Bool -> m () -> m ()
 whenM b f = b >>= \x -> if x then f else return ()
 
 run :: MonadCLI ()
-run = whenM doStep run
+run = whenM (liftM not doStep) run
 
 parseNum :: String -> Int
 parseNum "" = 1
@@ -138,10 +138,11 @@ setVal str =
     "mb"  -> lift2 . setMB $ valO
     _     -> outputStrLn "Unknown location for write operation!"
 
+-- Returns true if halted
 doStep :: MonadCLI Bool
 doStep = do
   h <- lift2 isHalted
-  if h then return False
+  if h then return True
     else do b <- lift2 step
             s <- get
             unDS s
