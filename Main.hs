@@ -31,7 +31,7 @@ type MonadCLI a = StateT DebugOp PDP8 a
 -- embedded in MonadCLI
 lift2 = lift
 
-prompt = "\n> "
+prompt = "# "
 
 main 
   = runPDP8
@@ -100,12 +100,17 @@ run :: MonadCLI ()
 run = whenM doStep run
 
 parseNum :: String -> Int
-parseNum = read . ('0':) . filter isDigit
+parseNum "" = 1
+parseNum s = read . ('0':) . filter isDigit $ s
 
 parseGetter :: String -> MonadCLI ()
 parseGetter "stats" = lift2 getStats >>= outputStrLn . renderStats
 parseGetter "logs"  = lift2 getStats >>= outputStrLn . renderLogs
-parseGetter "mem"   = lift2 getMem   >>= prnt
+parseGetter "mem"   = do
+  m <- lift2 getMem
+  outputStr . unlines
+       . map (\(a,v) -> show4 (unAddr a) ++ " -> " ++ show4 v) 
+       . M.toList $ m
 parseGetter "pc"    = lift2 getPC    >>= prnt
 parseGetter "ac"    = lift2 getAC    >>= prnt
 parseGetter "l"     = lift2 getL     >>= prnt
@@ -113,6 +118,7 @@ parseGetter "sr"    = lift2 getSR    >>= prnt
 parseGetter "ir"    = lift2 getIR    >>= prnt . decodeInstr
 parseGetter "cpma"  = lift2 getCPMA  >>= prnt
 parseGetter "mb"    = lift2 getMB    >>= prnt
+parseGetter _       = outputStrLn "Unknown location for read operation!"
 
 setVal :: String -> MonadCLI ()
 setVal str =
@@ -128,6 +134,9 @@ setVal str =
     "l"   -> lift2 . setL . fromIntegral $valO
     "sr"  -> lift2 . setSR $ valO
     "ir"  -> lift2 . setIR $ valO
+    "cpma" -> lift2 . setCPMA $ valO
+    "mb"  -> lift2 . setMB $ valO
+    _     -> outputStrLn "Unknown location for write operation!"
 
 doStep :: MonadCLI Bool
 doStep = do
