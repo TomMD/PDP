@@ -25,7 +25,7 @@ newtype DebugOp = DS { unDS :: MonadCLI () }
 noDebug :: DebugOp
 noDebug = DS (return ())
 
-type MonadCLI a = StateT DebugOp (HaskelineT PDP8) a
+type MonadCLI a = StateT DebugOp PDP8 a
 
 -- However many liftings are needed for the PDP8 monad
 -- embedded in MonadCLI

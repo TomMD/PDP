@@ -24,15 +24,35 @@ module Monad
   , getMB, setMB, modMB
   , getMQ, setMQ, modMQ
   , clearHalt, halt, isHalted
+   -- * Re-exported IO Operations
+  , getInputChar, getInputLine, outputStr, outputStrLn
   ) where
 
+import Prelude hiding (catch)
 import Control.Monad.State
 import Control.Monad.Writer
+import System.Console.Haskeline.Class
+import Control.Monad.IO.Class
 
 import Types
 
-newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats IO) a }
+newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats (HaskelineT IO)) a }
   deriving (MonadState MachineState, Monad, Functor)
+
+instance MonadHaskeline PDP8 where
+  getInputLine = PDP8 . getInputLine
+  getInputChar = PDP8 . getInputChar
+  outputStr    = PDP8 . outputStr
+  outputStrLn  = PDP8 . outputStrLn
+
+instance MonadException PDP8 where
+  catch m h = PDP8 $ catch (unPDP8 m) 
+                           (\e -> unPDP8 (h e))
+  block = PDP8 . block . unPDP8
+  unblock = PDP8 . unblock . unPDP8
+
+instance MonadIO PDP8 where
+  liftIO = PDP8 . liftIO
 
 clearHalt, halt :: PDP8 ()
 halt      = modify (\s -> s { halted = True  })
@@ -141,6 +161,7 @@ execPDP8 = liftM (\(s,t,a) -> (s,t)) . runPDP8
 
 runPDP8 :: PDP8 a -> IO (MachineState, Stats, a)
 runPDP8 = liftM (\((a,st),stats) -> (st,stats,a))
+        . runHaskelineT defaultSettings
         . flip runStateT initialStats
         . flip runStateT initialState
         . unPDP8
