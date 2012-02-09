@@ -56,6 +56,7 @@ loop = do
       return True
       
 processCmd :: String -> MonadCLI ()
+processCmd "reset" = lift2 reset
 processCmd i | "step" `isPrefixOf` i = do
       let nr = parseNum (drop 4 i)
       replicateM_ nr doStep
@@ -64,7 +65,7 @@ processCmd i | "show " `isPrefixOf` i = do
       parseGetter (drop 5 i)
 processCmd "cleardebug" = modify (const noDebug)
 processCmd i | "debug " `isPrefixOf` i = do
-      let op = parseGetter (drop 6 i)
+      let op = parseGetter (filter isAlpha $ drop 6 i)
       modify (\s -> DS $ unDS s >> outputStr (i ++ ": ") >> op)
 processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
@@ -73,7 +74,7 @@ processCmd i | "load " `isPrefixOf` i = do
       lift2 $ loadProgram (parseObj cont)
 processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
-processCmd "help" = do
+processCmd _ = do
       outputStrLn $ unlines
         [ "PDP8 Interpreter (by Thomas DuBuisson & Garrett Morris)"
         , "Commands:"
