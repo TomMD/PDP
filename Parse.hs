@@ -60,7 +60,7 @@ encodeInstr (Instr _ _ _ _ i) = i
 decodeInstr :: Int12 -> Instr
 decodeInstr i
   | op >= 0 && op < 6 = decodeMemInstr op i
-  | op == 6           = Instr (PDPOpIO IOOp) Nothing Nothing Nothing i
+  | op == 6           = decodeIOInstr i
   | op == 7 && not (testBit i 8) = instr PDPOpMicro1 (decodeMicroInstr1 i) i
   | op == 7 && testBit i 8
             && testBit i 0       = instr PDPOpMicro2 (decodeMicroInstr2 i) i
@@ -109,3 +109,19 @@ microOp2Masks =
 microOp3Masks :: [(Int12,MicroOp3)]
 microOp3Masks =
   [(oct 7601, CLA3), (oct 7421, MQL), (oct 7501, MQA), (oct 7521, SWP), (oct 7621, CAM)]
+
+decodeIOInstr :: Int12 -> Instr
+decodeIOInstr i 
+  = Instr (PDPOpIO op) Nothing Nothing Nothing i
+ where
+ op
+  | i == oct 6030 = KCF  -- What, no KFC?!?!
+  | i == oct 6031 = KSF
+  | i == oct 6032 = KCC
+  | i == oct 6034 = KRS
+  | i == oct 6036 = KRB
+  | i == oct 6040 = TFL
+  | i == oct 6041 = TSF
+  | i == oct 6042 = TCF
+  | i == oct 6044 = TPC
+  | i == oct 6046 = TLS
