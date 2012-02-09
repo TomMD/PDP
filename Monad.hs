@@ -17,6 +17,7 @@ module Monad
   , getAC, setAC, modAC
   , getPC, setPC, modPC
   , getL, setL, modL
+  , modLAC
   , getSR, setSR, modSR
   , getIR, setIR, modIR
   , getCPMA, setCPMA, modCPMA
@@ -117,6 +118,13 @@ setL x = get >>= \s -> put s { lb = x }
 
 modL :: (Int -> Int) -> PDP8 ()
 modL f = getL >>= setL . f
+
+modLAC :: ((Int,Int12) -> (Int,Int12)) -> PDP8 ()
+modLAC f = do l <- getL
+              ac <- getAC
+              let (l', ac') = f (l, ac)
+              setL l'
+              setAC ac'
 
 evalPDP8 :: PDP8 a -> IO a
 evalPDP8 = liftM (\(_,_,a) -> a) . runPDP8
