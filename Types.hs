@@ -46,7 +46,7 @@ initialStats = Stats 0 M.empty [] []
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
 data MachineState =
-  MS { pc,sr,ac     :: Int12
+  MS { pc,sr,ac,ir  :: Int12
      , lb           :: Int -- 1 bit
      , mem          :: Memory
      } deriving (Eq, Ord, Show)
@@ -57,7 +57,7 @@ type Memory = M.Map Addr Int12
 data Purpose = DataRead | DataWrite | InstrFetch
   deriving (Eq, Ord, Show, Enum)
 
-initialState  = MS 0 0 0 0 initialMemory
+initialState  = MS 0 0 0 0 0 initialMemory
 initialMemory = M.empty
 
 data Value = VInstr { vInstr :: Instr } | VAddr { vAddr :: Addr }
@@ -108,9 +108,18 @@ data MemOp
   | JMP  -- read new pc from addr
   deriving (Eq, Ord, Show, Enum)
 
-data IOOp =
-  -- A general placeholder for IO
-    IOOp
+data IOOp
+  = KCF
+  | KSF
+  | KCC
+  | KRS
+  | KRB
+  | TFL
+  | TSF
+  | TCF
+  | TPC
+  | TLS
+  -- TOO MANY TLAs!!!
   deriving (Eq, Ord, Show, Enum)
 
 data MicroOp1 =
