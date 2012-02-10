@@ -17,14 +17,20 @@ import Numeric
 
 renderLogs :: Stats -> String
 renderLogs s =
-  unlines [ renderMemoryLog (memoryLog s)
+  unlines [ "Memory Log:"
+          , renderMemoryLog (memoryLog s)
+          , "Branch Log:"
           , renderBranchLog (branchLog s)
           ]
 
 renderMemoryLog :: MemoryLog -> String
 renderMemoryLog
   = unlines
-  . map (\(p,a) -> show (fromEnum p) ++ " " ++ showOct (unAddr a) "")
+  . map (\(p,a) -> showB p ++ " " ++ showOct (unAddr a) "")
+  where
+    showB InstrFetch = "Instr Fetch"
+    showB DataRead   = "Data Read  "
+    showB DataWrite  = "Data Write "
 
 renderBranchLog :: BranchLog -> String
 renderBranchLog

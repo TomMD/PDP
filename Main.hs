@@ -48,6 +48,7 @@ loop = do
     Nothing -> loop
   where 
     process :: String -> MonadCLI Bool
+    process "" = return True
     process "quit" = return False
     process s = do
       processCmd s
