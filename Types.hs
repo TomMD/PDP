@@ -37,12 +37,13 @@ type MemoryLog = [(Purpose,Addr)]
 -- The Stats needing tracked for the assignment
 data Stats =
   Stats { cycleCnt :: Integer
+        , totalInstrs :: Integer
         , instrBreakdown :: M.Map String Integer
         , branchLog :: BranchLog
         , memoryLog :: MemoryLog
         }
 
-initialStats = Stats 0 M.empty [] []
+initialStats = Stats 0 0 M.empty [] []
 
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
@@ -114,7 +115,6 @@ data IOOp  = KCF
            | TCF
            | TPC
            | TLS
-           | UNK_IO Int12
   deriving (Eq, Ord, Show)
 
 data InstructionType

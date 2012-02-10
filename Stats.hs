@@ -38,9 +38,8 @@ renderBranchLog
   . map (\(p,a) -> show p ++ " " ++ showOct (unAddr a) "")
 
 renderStats :: Stats -> String
-renderStats (Stats cy inst bl ml) =
-  let nrInst = sum (M.elems inst)
-  in unlines [ "Total instructions: " ++ show nrInst
+renderStats (Stats cy tot inst bl ml) =
+     unlines [ "Total instructions: " ++ show tot
              , "Total cycles:       " ++ show cy
              , "Breakdown:        \n" ++ renderAll (M.toList inst)]
  where
@@ -53,9 +52,9 @@ renderStats (Stats cy inst bl ml) =
 incStats :: Instr -> PDP8 ()
 incStats i = modStats f
  where
-   f (Stats cy bd x y) = Stats (cy + nrCycles i) (foldl incMnemonic bd (mnemonicOf i)) x y
+   f (Stats cy tot bd x y) = Stats (cy + nrCycles i) (tot+1) (foldl incMnemonic bd (mnemonicOf i)) x y
    incMnemonic mp nic = M.insertWith (+) nic 1 mp
-   
+
 mnemonicOf :: Instr -> [String]
 mnemonicOf (AND {}) = ["AND"]
 mnemonicOf (TAD {}) = ["TAD"]
@@ -64,7 +63,7 @@ mnemonicOf (DCA {}) = ["DCA"]
 mnemonicOf (JMS {}) = ["JMS"]
 mnemonicOf (JMP {}) = ["JMP"]
 mnemonicOf (IOT i)  = [show i]
-mnemonicOf (OP1 {..}) = map show micros1
+mnemonicOf (OP1 {..}) = (if cla then ("CLA" :) else id) (map show micros1)
 mnemonicOf (OP2 {..}) = map show micros2
-mnemonicOf (OP3 {..}) = map show micros3
+mnemonicOf (OP3 {..}) = (if cla then ("CLA" :) else id) (map show micros3)
 mnemonicOf (UNK {}) = ["UNK"]
