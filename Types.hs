@@ -114,6 +114,7 @@ data IOOp  = KCF
            | TCF
            | TPC
            | TLS
+           | UNK_IO Int12
   deriving (Eq, Ord, Show)
 
 data InstructionType

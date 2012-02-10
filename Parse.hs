@@ -101,6 +101,7 @@ decodeIOInstr i
   | i == oct 6042 = TCF
   | i == oct 6044 = TPC
   | i == oct 6046 = TLS
+  | otherwise     = UNK_IO i
 
 decodeMicroInstr1 :: Int12 -> Maybe Instr
 decodeMicroInstr1 i = case (testBit i 3, testBit i 2, testBit i 1) of
