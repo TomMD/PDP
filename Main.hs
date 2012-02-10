@@ -52,7 +52,6 @@ loop = do
     process s = do
       processCmd s
       b <- lift2 isHalted
-      when b (outputStrLn "Program HALTed")
       return True
       
 processCmd :: String -> MonadCLI ()
@@ -70,7 +69,7 @@ processCmd i | "debug " `isPrefixOf` i = do
 processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
       lift2 reset
-      cont <- liftIO (readFile f)
+      cont <- liftIO (readFile $ filter (/= '"') f)
       lift2 $ loadProgram (parseObj cont)
 processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
@@ -147,7 +146,9 @@ doStep = do
     else do b <- lift2 step
             s <- get
             unDS s
-            lift2 isHalted
+            res <- lift2 isHalted
+            when res (outputStrLn "Program HALTed")
+            return res
 
 prnt :: (Show a) => a -> MonadCLI ()
 prnt = outputStrLn . show
