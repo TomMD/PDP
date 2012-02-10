@@ -78,7 +78,9 @@ effectiveAddr i iaddr =
 -- |Given a list of values produced by parseObj, load the data into
 -- memory. N.B. 'loadProgram' won't adjust the memory access counters!
 loadProgram :: [Value] -> PDP8 ()
-loadProgram values = go (Addr 0) values
+loadProgram values =
+ do go (Addr 0) values
+    setPC (startAddr values)
  where
    go a []     = return ()
    go _ (VAddr a  : vs) = go a vs
@@ -86,6 +88,10 @@ loadProgram values = go (Addr 0) values
      modMem (M.insert a i)
      go (incrAddr a) vs
    incrAddr = Addr . (+1) . unAddr
+
+   startAddr (VAddr (Addr a) : _)   = a
+   startAddr (VInstr _ : vs) = startAddr vs
+   startAddr []              = 0
 
 -- Only needed if we don't force this property
 -- by some sort of smart constructor.  Good idea?
