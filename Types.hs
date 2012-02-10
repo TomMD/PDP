@@ -37,7 +37,7 @@ type MemoryLog = [(Purpose,Addr)]
 -- The Stats needing tracked for the assignment
 data Stats =
   Stats { cycleCnt :: Integer
-        , instrBreakdown :: M.Map InstructionType Integer
+        , instrBreakdown :: M.Map String Integer
         , branchLog :: BranchLog
         , memoryLog :: MemoryLog
         }
@@ -116,8 +116,14 @@ data IOOp  = KCF
            | TLS
   deriving (Eq, Ord, Show)
 
-data InstructionType = MemOp | IOOp | MicroOp1 | MicroOp2 | MicroOp3 | UnknownOp
-                     deriving (Eq, Ord, Show)
+data InstructionType
+  = MemOp
+  | IOOp
+  | MicroOp1
+  | MicroOp2
+  | MicroOp3
+  | UnknownOp
+    deriving (Eq, Ord, Show)
 
 typeOf (IOT {}) = IOOp
 typeOf (OP1 {}) = MicroOp1

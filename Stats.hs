@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Stats
   ( renderStats
   , renderLogs
@@ -33,17 +34,31 @@ renderBranchLog
 renderStats :: Stats -> String
 renderStats (Stats cy inst bl ml) =
   let nrInst = sum (M.elems inst)
-  in "Total instructions: " ++ show nrInst ++
-     "Total cycles:       " ++ show cy ++
-     "Breakdown:          " ++ renderAll (M.toList inst)
+  in unlines [ "Total instructions: " ++ show nrInst
+             , "Total cycles:       " ++ show cy
+             , "Breakdown:          " ++ renderAll (M.toList inst)]
  where
-  renderAll :: [(InstructionType,Integer)] -> String
-  renderAll = unlines. map ("                 " ++) . map renderLn
-  renderLn :: (InstructionType,Integer) -> String
-  renderLn (o,i) = show o ++ " " ++ show i
+  renderAll :: [(String,Integer)] -> String
+  renderAll = unlines . map ("                 " ++) . map renderLn
+  renderLn :: (String,Integer) -> String
+  renderLn (o,i) = o ++ " " ++ show i
 
 -- |Increment the instruction AND cylce count
 incStats :: Instr -> PDP8 ()
 incStats i = modStats f
  where
-   f (Stats cy bd x y) = Stats (cy + nrCycles i) (M.insertWith (+) (typeOf i) 1 bd) x y
+   f (Stats cy bd x y) = Stats (cy + nrCycles i) (foldl incMnemonic bd (mnemonicOf i)) x y
+   incMnemonic mp nic = M.insertWith (+) nic 1 mp
+   
+mnemonicOf :: Instr -> [String]
+mnemonicOf (AND {}) = ["AND"]
+mnemonicOf (TAD {}) = ["TAD"]
+mnemonicOf (ISZ {}) = ["ISZ"]
+mnemonicOf (DCA {}) = ["DCA"]
+mnemonicOf (JMS {}) = ["JMS"]
+mnemonicOf (JMP {}) = ["JMP"]
+mnemonicOf (IOT i)  = [show i]
+mnemonicOf (OP1 {..}) = map show micros1
+mnemonicOf (OP2 {..}) = map show micros2
+mnemonicOf (OP3 {..}) = map show micros3
+mnemonicOf (UNK {}) = ["UNK"]
