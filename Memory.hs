@@ -13,6 +13,7 @@ import Control.Monad (liftM)
 import Arch (addrMode, AddrMode(..))
 import Monad
 import Parse (decodeInstr)
+import Stats
 import Types
 import Util
 
@@ -43,7 +44,9 @@ fetchInstruction a = do
   logMem InstrFetch a
   rawInstr <- gets (M.findWithDefault 0 a . mem)
   setIR rawInstr
-  return (decodeInstr rawInstr)
+  let i = decodeInstr rawInstr
+  incStats i
+  return i
 
 -- |Given the newly fetched instruction, which must be a memory
 -- operation, returns the effective address while performing any
