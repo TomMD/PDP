@@ -33,20 +33,20 @@ lift2 = lift
 
 prompt = "# "
 
-main 
+main
   = runPDP8
   . flip runStateT noDebug
   $ loop
 
 loop :: MonadCLI ()
 loop = do
-  i <- getInputLine prompt
+  i <- fmap (fmap $ reverse . dropWhile isSpace . reverse) (getInputLine prompt)
   case i of
     Just ln -> do
       b <- process ln
       when b loop
     Nothing -> loop
-  where 
+  where
     process :: String -> MonadCLI Bool
     process "" = return True
     process "quit" = return False
@@ -54,7 +54,7 @@ loop = do
       processCmd s
       b <- lift2 isHalted
       return True
-      
+
 processCmd :: String -> MonadCLI ()
 processCmd "reset" = lift2 reset
 processCmd i | "step" `isPrefixOf` i = do
@@ -72,7 +72,7 @@ processCmd i | "load " `isPrefixOf` i = do
       lift2 reset
       let hdl :: SomeException -> MonadCLI ()
           hdl _ = outputStrLn "Error loading object file!"
-      catch (do 
+      catch (do
         cont <- liftIO (readFile $ filter (/= '"') f)
         lift2 $ loadProgram (parseObj cont)) hdl
 processCmd i | "set " `isPrefixOf` i = do
@@ -101,7 +101,7 @@ whenM :: Monad m => m Bool -> m () -> m ()
 whenM b f = b >>= \x -> if x then f else return ()
 
 run :: MonadCLI ()
-run = whenM (liftM not doStep) run
+run = whenM (fmap not doStep) run
 
 parseNum :: String -> Int
 parseNum "" = 1
@@ -113,7 +113,7 @@ parseGetter "logs"  = lift2 getStats >>= outputStrLn . renderLogs
 parseGetter "mem"   = do
   m <- lift2 getMem
   outputStr . unlines
-       . map (\(a,v) -> show4 (unAddr a) ++ " -> " ++ show4 v) 
+       . map (\(a,v) -> show4 (unAddr a) ++ " -> " ++ show4 v)
        . M.toList $ m
 parseGetter "pc"    = lift2 getPC    >>= prnt
 parseGetter "ac"    = lift2 getAC    >>= prnt
@@ -127,10 +127,10 @@ parseGetter _       = outputStrLn "Unknown location for read operation!"
 setVal :: String -> MonadCLI ()
 setVal str =
   let (locS,valS) = break isDigit str
-      valO = readO valS
+      valO = octS valS
       (locOS,valO2S) = break isSpace valS
-      locO  = Addr . readO $ locOS
-      valO2 = readO valO2S
+      locO  = Addr . octS $ locOS
+      valO2 = octS valO2S
   in case filter isAlpha locS of
     "mem" -> lift2 (modMem (M.insert locO valO2))
     "pc"  -> lift2 . setPC $ valO
@@ -157,5 +157,5 @@ doStep = do
 prnt :: (Show a) => a -> MonadCLI ()
 prnt = outputStrLn . show
 
-readO :: (Read a, Integral a) => String -> a
-readO = fst . head . readOct
+octS :: Integral a => String -> a
+octS = oct . (read :: String -> Int)
