@@ -86,7 +86,7 @@ loadProgram values =
      go (incrAddr a) vs
    incrAddr = Addr . (+1) . unAddr
 
-   startAddr (VAddr a : _)   = a
+   startAddr (VAddr (Addr a) : _)   = a
    startAddr (VInstr _ : vs) = startAddr vs
    startAddr []              = 0
 
