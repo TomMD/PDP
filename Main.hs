@@ -69,8 +69,11 @@ processCmd i | "debug " `isPrefixOf` i = do
 processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
       lift2 reset
-      cont <- liftIO (readFile $ filter (/= '"') f)
-      lift2 $ loadProgram (parseObj cont)
+      let hdl :: SomeException -> MonadCLI ()
+          hdl _ = outputStrLn "Error loading object file!"
+      catch (do 
+        cont <- liftIO (readFile $ filter (/= '"') f)
+        lift2 $ loadProgram (parseObj cont)) hdl
 processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
 processCmd _ = do
