@@ -60,12 +60,12 @@ decodeInstr i
   | op == 6                      = decodeIOInstr i
   | op == 7 && not (testBit i 8) = case decodeMicroInstr1 i of
                                      Just i  -> i
-                                     Nothing -> UNK
+                                     Nothing -> UNK i
   | op == 7 && testBit i 8
             && not (testBit i 0) = decodeMicroInstr2 i
   | op == 7 && testBit i 8
             && testBit i 0       = decodeMicroInstr3 i
-  | otherwise                    = UNK
+  | otherwise                    = UNK i
  where
   op = ob 111 .&. (i `shiftR` 9)
 
@@ -78,6 +78,7 @@ decodeMemInstr op i = opCon op ind mempg off
  opCon 3 = DCA
  opCon 4 = JMS
  opCon 5 = JMP
+ opCon _ = \_ _ _ -> UNK i
 
  ind   = if testBit i 8 then Indirect else Direct
  mempg = if testBit i 7 then CurrentPage else ZeroPage
@@ -88,20 +89,22 @@ decodeMicro masks i = (testBit i 7, map snd (filter (\(bit, _) -> testBit i bit)
 
 decodeIOInstr :: Int12 -> Instr
 decodeIOInstr i
-  = IOT op
+  = case op of
+         Just o  -> IOT o
+         Nothing -> UNK i
  where
  op
-  | i == oct 6030 = KCF
-  | i == oct 6031 = KSF
-  | i == oct 6032 = KCC
-  | i == oct 6034 = KRS
-  | i == oct 6036 = KRB
-  | i == oct 6040 = TFL
-  | i == oct 6041 = TSF
-  | i == oct 6042 = TCF
-  | i == oct 6044 = TPC
-  | i == oct 6046 = TLS
-  | otherwise     = UNK_IO i
+  | i == oct 6030 = Just KCF
+  | i == oct 6031 = Just KSF
+  | i == oct 6032 = Just KCC
+  | i == oct 6034 = Just KRS
+  | i == oct 6036 = Just KRB
+  | i == oct 6040 = Just TFL
+  | i == oct 6041 = Just TSF
+  | i == oct 6042 = Just TCF
+  | i == oct 6044 = Just TPC
+  | i == oct 6046 = Just TLS
+  | otherwise     = Nothing
 
 decodeMicroInstr1 :: Int12 -> Maybe Instr
 decodeMicroInstr1 i = case (testBit i 3, testBit i 2, testBit i 1) of
@@ -117,7 +120,7 @@ decodeMicroInstr2 i = OP2 cla (testBit i 3) skips micros
           (_, micros) = decodeMicro microOp2Masks i
 
 decodeMicroInstr3 :: Int12 -> Instr
-decodeMicroInstr3 i | MQL `elem` ops && MQA `elem` ops = UNK
+decodeMicroInstr3 i | MQL `elem` ops && MQA `elem` ops = UNK i
                     | otherwise                        = OP3 cla ops
     where (cla, ops) = decodeMicro microOp3Masks i
 

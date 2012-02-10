@@ -16,7 +16,7 @@ step = do iaddr <- getPC
           modPC (1+)
           i <- fetchInstruction (Addr iaddr)
           case i of
-            UNK -> return () -- TODO: log
+            UNK {} -> return () -- TODO: log
             OP1 cla micros logical -> doOp1 cla micros logical
             OP2 cla invertAndUnion skips micros -> doOp2 cla invertAndUnion skips micros
             OP3 cla micros -> doOp3 cla micros

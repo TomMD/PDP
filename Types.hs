@@ -101,7 +101,7 @@ data Instr = AND { indirection :: Indirection
                  , micros2 :: [MicroOp2] }
            | OP3 { cla :: Bool
                  , micros3 :: [MicroOp3] }
-           | UNK
+           | UNK Int12
            deriving (Eq, Ord, Show)
 
 data IOOp  = KCF
