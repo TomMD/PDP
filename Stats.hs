@@ -36,7 +36,7 @@ renderStats (Stats cy inst bl ml) =
   let nrInst = sum (M.elems inst)
   in unlines [ "Total instructions: " ++ show nrInst
              , "Total cycles:       " ++ show cy
-             , "Breakdown:          " ++ renderAll (M.toList inst)]
+             , "Breakdown:        \n" ++ renderAll (M.toList inst)]
  where
   renderAll :: [(String,Integer)] -> String
   renderAll = unlines . map ("                 " ++) . map renderLn
