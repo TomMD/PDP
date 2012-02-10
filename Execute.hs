@@ -39,7 +39,7 @@ doOp1 cla micros logical =
                                       low  = (a .&. oct 0077) `shiftL` 6
                                   in low .|. high)
     where rotL, rotR :: (Int,Int12) -> (Int,Int12)
-          rotL (l, a) = (chiNeq (a .&. 4000) 0, a `shiftL` 1 .|. fromIntegral l)
+          rotL (l, a) = (chiNeq (a .&. oct 4000) 0, a `shiftL` 1 .|. fromIntegral l)
           rotR (l, a) = (chiNeq (a .&. 1) 0, fromIntegral (l `shiftL` 11) .|. a `shiftR` 1)
           chiNeq x y | x /= y    = 1
                      | otherwise = 0
@@ -66,16 +66,28 @@ doOp3 cla micros =
                                     setAC 0)
        when (MQA `elem` micros) (modAC . (.|.) =<< getMQ)
 
-doIO _ = return ()
+doIO :: IOOp -> PDP8 ()
+doIO KCF = setKeyboardFlag False
+doIO KSF = getKeyboardFlag >>= \b -> when b skip
+doIO KCC = setKeyboardFlag False >> setAC 0
+doIO KRS = getKB >>= \kb -> modAC (.|. kb)
+doIO KRB = setKeyboardFlag False >> getKB >>= setAC
+doIO TFL = return () -- error "TFL is a PDP-8/E only instruction"
+doIO TSF = getTeleprinterFlag >>= \b -> when b skip
+doIO TCF = setTeleprinterFlag False
+doIO TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0xFF) =<< getAC
+doIO TLS = doIO TPC >> setTeleprinterFlag False
+
+skip = modPC (+1)
 
 execute i a@(Addr v) =
     do operand <- load a
        case i of
          AND {} -> modAC (operand .&.)
-         TAD {} -> do a <- getAC
-                      let sum = a + operand
+         TAD {} -> do ac <- getAC
+                      let sum = ac + operand
                       setAC sum
-                      when (signum a == signum operand && signum a /= signum sum) (modL complement)
+                      when (signum ac == signum operand && signum ac /= signum sum) (modL complement)
          ISZ {} -> let operand' = operand + 1
                    in do store a operand'
                          when (operand' == 0) (modPC (1+))

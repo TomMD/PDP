@@ -24,6 +24,9 @@ module Monad
   , getMB, setMB, modMB
   , getMQ, setMQ, modMQ
   , clearHalt, halt, isHalted
+   -- * PDP-8 operations supporting IOT
+  , setTeleprinterFlag, getTeleprinterFlag
+  , setKeyboardFlag, getKeyboardFlag, getKB
    -- * Re-exported IO Operations
   , getInputChar, getInputLine, outputStr, outputStrLn
   ) where
@@ -31,6 +34,7 @@ module Monad
 import Prelude hiding (catch)
 import Control.Monad.State
 import Control.Monad.Writer
+import Data.Maybe
 import System.Console.Haskeline.Class
 import Control.Monad.IO.Class
 
@@ -46,7 +50,7 @@ instance MonadHaskeline PDP8 where
   outputStrLn  = PDP8 . outputStrLn
 
 instance MonadException PDP8 where
-  catch m h = PDP8 $ catch (unPDP8 m) 
+  catch m h = PDP8 $ catch (unPDP8 m)
                            (\e -> unPDP8 (h e))
   block = PDP8 . block . unPDP8
   unblock = PDP8 . unblock . unPDP8
@@ -149,6 +153,25 @@ modLAC f = do l <- getL
               let (l', ac') = f (l, ac)
               setL l'
               setAC ac'
+
+-- The teleprinter flag is a dummy.  Our printer runs infinately fast,
+-- so thinks the program being interpreted.
+setTeleprinterFlag :: Bool -> PDP8 ()
+setTeleprinterFlag _ = return ()
+
+getTeleprinterFlag :: PDP8 Bool
+getTeleprinterFlag = return True
+
+-- The keyboard flag is also a dummy - there is always keyboard IO to be read!
+setKeyboardFlag :: Bool -> PDP8 ()
+setKeyboardFlag _ = return ()
+
+getKeyboardFlag :: PDP8 Bool
+getKeyboardFlag = return True
+
+-- We currently print a prompt asking the user for a character, but that can change.
+getKB :: PDP8 Int12
+getKB = liftM (fromIntegral . fromEnum . fromMaybe 'X') (getInputChar "->")
 
 evalPDP8 :: PDP8 a -> IO a
 evalPDP8 = liftM (\(_,_,a) -> a) . runPDP8
