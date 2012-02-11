@@ -6,7 +6,6 @@ import Control.Monad
 import Data.Bits
 
 import Monad
-import Stats
 import Types
 import Memory
 import Util
@@ -75,24 +74,25 @@ doIO KRB = setKeyboardFlag False >> getKB >>= setAC
 doIO TFL = return () -- error "TFL is a PDP-8/E only instruction"
 doIO TSF = getTeleprinterFlag >>= \b -> when b skip
 doIO TCF = setTeleprinterFlag False
-doIO TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0xFF) =<< getAC
+doIO TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0x7F) =<< getAC
 doIO TLS = doIO TPC >> setTeleprinterFlag False
 
 skip = modPC (+1)
 
-execute i a@(Addr v) =
-    do operand <- load a
+execute i addr@(Addr v) =
+    do operand <- load addr
        case i of
          AND {} -> modAC (operand .&.)
-         TAD {} -> do ac <- getAC
-                      let sum = ac + operand
+         TAD {} -> do a <- getAC
+                      let sum = a + operand
                       setAC sum
-                      when (signum ac == signum operand && signum ac /= signum sum) (modL complement)
+                      when (signum a == signum operand && signum a /= signum sum) (modL complement)
          ISZ {} -> let operand' = operand + 1
-                   in do store a operand'
+                   in do store addr operand'
                          when (operand' == 0) (modPC (1+))
-         DCA {} -> do store a =<< getAC
+         DCA {} -> do store addr =<< getAC
                       setAC 0
-         JMS {} -> do store a =<< getPC
+         JMS {} -> do store addr =<< getPC
                       setPC (v + 1)
          JMP {} -> setPC v
+         _      -> return ()
