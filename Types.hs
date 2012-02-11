@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Types
   ( -- * Aliases
     BranchLog, MemoryLog, Int12, Memory
@@ -36,11 +37,11 @@ type MemoryLog = [(Purpose,Addr)]
 
 -- The Stats needing tracked for the assignment
 data Stats =
-  Stats { cycleCnt :: Integer
-        , totalInstrs :: Integer
+  Stats { cycleCnt       :: !Integer
+        , totalInstrs    :: !Integer
         , instrBreakdown :: M.Map String Integer
-        , branchLog :: BranchLog
-        , memoryLog :: MemoryLog
+        , branchLog      :: !BranchLog
+        , memoryLog      :: !MemoryLog
         }
 
 initialStats = Stats 0 0 M.empty [] []
@@ -48,13 +49,13 @@ initialStats = Stats 0 0 M.empty [] []
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
 data MachineState =
-  MS { pc,sr,ac,ir  :: Int12
-     , lb           :: Int -- 1 bit
-     , cpma, mb     :: Int12
-     , mq           :: Int12
-     , mem          :: Memory
-     , halted       :: Bool
-     } deriving (Eq, Ord, Show)
+  MS { pc,sr,ac,ir  :: {-# UNPACK #-} !Int12
+     , lb           :: {-# UNPACK #-} !Int -- 1 bit
+     , cpma, mb     :: {-# UNPACK #-} !Int12
+     , mq           :: {-# UNPACK #-} !Int12
+     , mem          :: !Memory
+     , halted       :: !Bool
+     } deriving (Eq, Show)
 
 -- The machine memory associates addresses to integers
 type Memory = M.Map Addr Int12
@@ -73,23 +74,23 @@ type Offset = Int12
 -- |The 'Instr'uncation data type carries the decoded op, indirection,
 -- memory page flags, and offset if applicable.
 data Instr = AND { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            | TAD { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            | ISZ { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            | DCA { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            | JMS { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            | JMP { indirection :: Indirection
-                 , page :: MemPage
-                 , offset :: Offset }
+                 , page        :: MemPage
+                 , offset      :: Offset }
            -- IO Ops
            | IOT IOOp
            -- End IO Ops
@@ -130,6 +131,7 @@ typeOf (IOT {}) = IOOp
 typeOf (OP1 {}) = MicroOp1
 typeOf (OP2 {}) = MicroOp2
 typeOf (OP3 {}) = MicroOp3
+typeOf (UNK {}) = UnknownOp
 typeOf _        = MemOp
 
 data MicroOp1 =

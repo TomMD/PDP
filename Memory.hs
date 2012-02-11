@@ -5,6 +5,7 @@ module Memory
   )where
 
 import Data.Bits
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import Numeric (showOct)
 import Control.Monad.State (gets)
@@ -21,6 +22,7 @@ import Util
 incPC :: PDP8 ()
 incPC = modPC (+1)
 
+findWithDefault d k m = fromMaybe d (M.lookup k m)
 -- End Utilities --
 
 -- Memory Operations --
@@ -29,7 +31,7 @@ incPC = modPC (+1)
 load :: Addr -> PDP8 Int12
 load a =
   logMem DataRead a >>
-  gets (M.findWithDefault 0 a . mem)
+  gets (findWithDefault 0 a . mem)
 
 -- |Store a 'Int12' at a given memory address
 store :: Addr -> Int12 -> PDP8 ()
@@ -42,7 +44,7 @@ store a i =
 fetchInstruction :: Addr -> PDP8 Instr
 fetchInstruction a = do
   logMem InstrFetch a
-  rawInstr <- gets (M.findWithDefault 0 a . mem)
+  rawInstr <- gets (findWithDefault 0 a . mem)
   setIR rawInstr
   let i = decodeInstr rawInstr
   incStats i
@@ -61,8 +63,7 @@ effectiveAddr i iaddr =
     where effectiveAddr' ZeroPage off ModeIndirect =
               liftM Addr (load (Addr off))
           effectiveAddr' ZeroPage off ModeDirect =
-              let ea = (iaddr .&. ob 111110000000) .|. off
-              in return (Addr ea)
+              return (Addr off)
           effectiveAddr' ZeroPage off ModeAutoIndexing =
               do let ptr = Addr off
                  addr <- load ptr
