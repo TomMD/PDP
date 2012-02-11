@@ -26,7 +26,7 @@ renderLogs s =
 renderMemoryLog :: MemoryLog -> String
 renderMemoryLog
   = unlines
-  . map (\(p,a) -> showB p ++ " " ++ showOct (unAddr a) "")
+  . map (\(p,a) -> showB p ++ " " ++ show (unAddr a))
   where
     showB InstrFetch = "Instr Fetch"
     showB DataRead   = "Data Read  "
