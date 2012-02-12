@@ -20,8 +20,6 @@ module Monad
   , modLAC
   , getSR, setSR, modSR
   , getIR, setIR, modIR
-  , getCPMA, setCPMA, modCPMA
-  , getMB, setMB, modMB
   , getMQ, setMQ, modMQ
   , clearHalt, halt, isHalted
    -- * PDP-8 operations supporting IOT
@@ -111,31 +109,25 @@ getStats = PDP8 (lift get)
 setStats :: Stats -> PDP8 ()
 setStats = PDP8 . lift . put
 
-getPC, getSR, getAC, getIR, getCPMA, getMB, getMQ :: PDP8 Int12
+getPC, getSR, getAC, getIR, getMQ :: PDP8 Int12
 getPC   = gets pc
 getSR   = gets sr
 getAC   = gets ac
 getIR   = gets ir
-getCPMA = gets cpma
-getMB   = gets mb
 getMQ   = gets mq
 
-modPC, modSR, modAC, modCPMA, modMB, modMQ :: (Int12 -> Int12) -> PDP8 ()
+modPC, modSR, modAC, modMQ :: (Int12 -> Int12) -> PDP8 ()
 modPC f   = modify (\s -> s { pc = f (pc s) })
 modSR f   = modify (\s -> s { sr = f (sr s) })
 modAC f   = modify (\s -> s { ac = f (ac s) })
 modIR f   = modify (\s -> s { ir = f (ir s) })
-modCPMA f = modify (\s -> s { cpma = f (cpma s) })
-modMB f   = modify (\s -> s { mb = f (mb s) })
 modMQ f   = modify (\s -> s { mq = f (mq s) })
 
-setPC, setSR, setAC, setCPMA, setMB, setMQ :: Int12 -> PDP8 ()
+setPC, setSR, setAC, setMQ :: Int12 -> PDP8 ()
 setPC x   = modPC (const x)
 setSR x   = modSR (const x)
 setAC x   = modAC (const x)
 setIR x   = modIR (const x)
-setCPMA x = modCPMA (const x)
-setMB x   = modMB (const x)
 setMQ x   = modMQ (const x)
 
 getL :: PDP8 Int

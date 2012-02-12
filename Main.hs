@@ -88,12 +88,13 @@ processCmd _ = do
         , "\tload <file>       Load an octal .obj file"
         , "\tdebug <loc>       Each step, print the value at <location>"
         , "\tcleardebug        Don't print any value on each step"
+        , "\treset             Reset all memory, registers, and stats (to zero)"
         , "-----------"
         , "Locations:"
         , "\tstats             Statistics (not settable!)"
         , "\tlogs              Log files  (not settable!)"
         , "\tmem               Memory (set with 'set mem <octAddr> <oct>')"
-        , "\t<reg>             Register (pc,ac,l,sr,ir,cpma,mb)"
+        , "\t<reg>             Register (pc,ac,l,sr,ir)"
         ]
 
 
@@ -120,8 +121,6 @@ parseGetter "ac"    = lift2 getAC    >>= prnt
 parseGetter "l"     = lift2 getL     >>= prnt
 parseGetter "sr"    = lift2 getSR    >>= prnt
 parseGetter "ir"    = lift2 getIR    >>= prnt . decodeInstr
-parseGetter "cpma"  = lift2 getCPMA  >>= prnt
-parseGetter "mb"    = lift2 getMB    >>= prnt
 parseGetter _       = outputStrLn "Unknown location for read operation!"
 
 setVal :: String -> MonadCLI ()
@@ -138,8 +137,6 @@ setVal str =
     "l"   -> lift2 . setL . fromIntegral $valO
     "sr"  -> lift2 . setSR $ valO
     "ir"  -> lift2 . setIR $ valO
-    "cpma" -> lift2 . setCPMA $ valO
-    "mb"  -> lift2 . setMB $ valO
     _     -> outputStrLn "Unknown location for write operation!"
 
 -- Returns true if halted

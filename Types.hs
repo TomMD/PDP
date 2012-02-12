@@ -51,7 +51,6 @@ initialStats = Stats 0 0 M.empty [] []
 data MachineState =
   MS { pc,sr,ac,ir  :: {-# UNPACK #-} !Int12
      , lb           :: {-# UNPACK #-} !Int -- 1 bit
-     , cpma, mb     :: {-# UNPACK #-} !Int12
      , mq           :: {-# UNPACK #-} !Int12
      , mem          :: !Memory
      , halted       :: !Bool
@@ -63,7 +62,7 @@ type Memory = M.Map Addr Int12
 data Purpose = DataRead | DataWrite | InstrFetch
   deriving (Eq, Ord, Show, Enum)
 
-initialState  = MS 0 0 0 0 0 0 0 0 initialMemory False
+initialState  = MS 0 0 0 0 0 0 initialMemory False
 initialMemory = M.empty
 
 data Value = VInstr { vInstr :: (Instr, Int12) } | VAddr { vAddr :: Addr }
