@@ -96,7 +96,7 @@ START,  JMS I   PTR0            / CALL SOLUTION ENGINE
 
                                 / S0 - SOLVE DIGIT D0
 S0,     0
-        HLT
+/        HLT
         CLA
         DCA     D0
         TAD     KM10
@@ -265,59 +265,3 @@ TESTD,  0
         JMP I   MON
 MON,    7600
 $
-
-    S7     0341
-    S7L    0346
-    S8     0400
-    S8L    0405
-    S9     0416
-    S9L    0423
-    TESTD  0434
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
