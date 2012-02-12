@@ -1,8 +1,9 @@
-/From  Learn to Program pg 3-23
+/ From  Learn to Program pg 3-23
 
+*0200
 START,  CLA CLL
         DCA COUNT
-        TAD I WORD
+        TAD WORD
         SNA
         HLT
 ROTATE, RAL
