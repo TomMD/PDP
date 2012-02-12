@@ -8,7 +8,7 @@ START,  CLA CLL
         HLT
 ROTATE, RAL
         SNL
-        JMP -2
+        JMP .-2
         CLL
         ISZ COUNT
         SNA
