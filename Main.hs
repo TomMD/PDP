@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 module Main where
 
 import Execute -- step :: PDP8 Bool (True == terminate?)
