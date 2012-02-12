@@ -56,8 +56,10 @@ doOp2 cla invertAndUnion skips micros =
           check SZA = (== 0) `fmap` getAC
           check SNL = (/= 0) `fmap` getL
 
-          skipIf True  = modPC (1 +)
+          skipIf True  = logSkip >> modPC (1 +)
           skipIf False = return ()
+
+          logSkip = getPC >>= \a -> logBranch (Addr $ a-1) (Addr $ a+1)
 
 doOp3 cla micros =
     do when cla (setAC 0)
@@ -79,17 +81,17 @@ doIO TLS = doIO TPC >> setTeleprinterFlag False
 
 skip = modPC (+1)
 
-execute i addr@(Addr v) =
-    do operand <- load addr
+execute i addr@(Addr v) = do
        case i of
-         AND {} -> modAC (operand .&.)
-         TAD {} -> do a <- getAC
+         AND {} -> load addr >>= \operand -> modAC (operand .&.)
+         TAD {} -> do operand <- load addr
+                      a <- getAC
                       let sum = a + operand
                       setAC sum
                       when (signum a == signum operand && signum a /= signum sum) (modL complement)
-         ISZ {} -> let operand' = operand + 1
-                   in do store addr operand'
-                         when (operand' == 0) (modPC (1+))
+         ISZ {} -> do operand <- fmap (+1) (load addr)
+                      store addr operand
+                      when (operand == 0) (modPC (1+))
          DCA {} -> do store addr =<< getAC
                       setAC 0
          JMS {} -> do store addr =<< getPC
