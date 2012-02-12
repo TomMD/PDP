@@ -1,5 +1,6 @@
 module Main where
 
+import qualified CLI as CLI
 import Execute -- step :: PDP8 Bool (True == terminate?)
 import Memory (loadProgram)
 import Monad
@@ -15,8 +16,10 @@ import Control.Monad.State
 import Control.Monad.Trans.Class (lift)
 import Data.Char (toLower, isDigit, isSpace, isAlpha)
 import Data.List
+import Data.Maybe (fromJust)
 import Numeric
 import System.Console.Haskeline.Class
+import System.IO (hPutStrLn, stderr)
 import qualified Data.Map as M
 
 newtype DebugOp = DS { unDS :: MonadCLI () }
@@ -33,9 +36,27 @@ lift2 = lift
 prompt = "# "
 
 main
-  = runPDP8
-  . flip runStateT noDebug
-  $ loop
+  = do mo <- CLI.getOptions
+       case mo of
+         Nothing -> runPDP8
+                    . flip runStateT noDebug
+                    $ loop
+         Just o  ->
+             runPDP8 $ flip runStateT noDebug $
+             do obj <- liftIO (readFile (fromJust (CLI.input o)))
+                lift2 (loadProgram (parseObj obj))
+                mapM_ addDebug (CLI.debug o)
+                run
+                mapM_ parseGetter (CLI.showAtEnd o)
+                case CLI.memoryLog o of
+                  Nothing -> return ()
+                  Just fn -> liftIO . writeFile fn . renderMemoryLog =<< lift2 getMemoryLog
+                case CLI.branchLog o of
+                  Nothing -> return ()
+                  Just fn -> liftIO . writeFile fn . renderBranchLog =<< lift2 getBranchLog
+                case CLI.statistics o of
+                  Nothing -> return ()
+                  Just fn -> liftIO . writeFile fn . renderStats =<< lift2 getStats
 
 loop :: MonadCLI ()
 loop = do
@@ -54,6 +75,10 @@ loop = do
       b <- lift2 isHalted
       return True
 
+addDebug :: String -> MonadCLI ()
+addDebug str = modify (\s -> DS $ unDS s >> outputStr (str ++ ": ") >> op)
+    where op = parseGetter (filter isAlpha str)
+
 processCmd :: String -> MonadCLI ()
 processCmd "reset" = lift2 reset
 processCmd i | "step" `isPrefixOf` i = do
@@ -63,9 +88,8 @@ processCmd "run" = run
 processCmd i | "show " `isPrefixOf` i = do
       parseGetter (drop 5 i)
 processCmd "cleardebug" = modify (const noDebug)
-processCmd i | "debug " `isPrefixOf` i = do
-      let op = parseGetter (filter isAlpha $ drop 6 i)
-      modify (\s -> DS $ unDS s >> outputStr (i ++ ": ") >> op)
+processCmd i | "debug " `isPrefixOf` i =
+      addDebug (drop 6 i)
 processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
       lift2 reset
