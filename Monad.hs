@@ -36,6 +36,8 @@ import Data.Maybe
 import System.Console.Haskeline.Class
 import Control.Monad.IO.Class
 
+import qualified Data.DList as D
+
 import Types
 
 newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats (HaskelineT IO)) a }
@@ -68,10 +70,10 @@ reset = setStats initialStats >> put initialState
 
 logBranch :: Addr -> Addr -> PDP8 ()
 logBranch src target =
-  modBranchLog (++ [(src,target)])
+  modBranchLog (`D.snoc` (src,target))
 
 logMem :: Purpose -> Addr -> PDP8 ()
-logMem p a = modMemoryLog (++ [(p,a)])
+logMem p a = modMemoryLog (`D.snoc` (p,a))
 
 getMemoryLog :: PDP8 MemoryLog
 getMemoryLog = PDP8 $ liftM memoryLog (lift get)
