@@ -1,12 +1,16 @@
 module CLI where
 
 import Data.List (intercalate)
+import Numeric (readOct)
 import System.Console.GetOpt
 import System.Environment (getArgs)
 import System.Exit
 import System.IO (hPutStrLn, stderr)
 
+import Types (Int12)
+
 data Options = O { input       :: Maybe String
+                 , startingPC  :: Maybe Int12
                  , debug       :: [String]
                  , showAtEnd   :: [String]
                  , memoryLog   :: Maybe String
@@ -15,10 +19,13 @@ data Options = O { input       :: Maybe String
                  , descriptive :: Bool
                  , showHelp    :: Bool }
 
-defaultOptions = O Nothing [] [] Nothing Nothing Nothing False False
+defaultOptions = O Nothing Nothing [] [] Nothing Nothing Nothing False False
 
 options :: [OptDescr (Options -> Options)]
-options = [ Option ['d'] ["debug"]
+options = [ Option ['p'] ["starting-pc"]
+                   (ReqArg (\x o -> o { startingPC = Just (fst (head (readOct x))) }) "VALUE")
+                   "Sets PC to VALUE (in octal)"
+          , Option ['d'] ["debug"]
                    (ReqArg (\x o -> o { debug = debug o ++ [x] }) "VALUE")
                    "Display VALUE after each step (where VALUE is stats, log, mem, pc, ac, l, sr, ir)"
           , Option ['e'] ["show-at-end"]

@@ -19,7 +19,7 @@ step = do iaddr <- getPC
             OP1 cla micros logical -> doOp1 cla micros logical
             OP2 cla invertAndUnion skips micros -> doOp2 iaddr cla invertAndUnion skips micros
             OP3 cla micros -> doOp3 cla micros
-            IOT ioop -> doIO ioop
+            IOT ioop -> doIO iaddr ioop
             _ -> execute iaddr i =<< effectiveAddr i iaddr
 
 doOp1 cla micros logical =
@@ -43,23 +43,23 @@ doOp1 cla micros logical =
           chiNeq x y | x /= y    = 1
                      | otherwise = 0
 
+skipIf iaddr True  = logSkip iaddr True >> modPC (1 +)
+skipIf iaddr False = logSkip iaddr False >> return ()
+
+logSkip iaddr = logBranch (Addr iaddr) (Addr (iaddr + 2)) SkipBranch
+
 doOp2 iaddr cla invertAndUnion skips micros =
     do logic invertAndUnion skips
        when cla (setAC 0)
        when (OSR `elem` micros) (modAC . (.|.) =<< getSR)
        when (HLT `elem` micros) halt
-    where logic True []     = skipIf True
-          logic False skips = skipIf . or =<< mapM check skips
-          logic True skips  = skipIf . and . map not =<< mapM check skips
+    where logic True []     = skipIf iaddr True
+          logic False skips = skipIf iaddr . or =<< mapM check skips
+          logic True skips  = skipIf iaddr . and . map not =<< mapM check skips
 
           check SMA = (< 0) `fmap` getAC
           check SZA = (== 0) `fmap` getAC
           check SNL = (/= 0) `fmap` getL
-
-          skipIf True  = logSkip True >> modPC (1 +)
-          skipIf False = logSkip False >> return ()
-
-          logSkip = logBranch (Addr iaddr) (Addr (iaddr + 2)) SkipBranch
 
 doOp3 cla micros =
     do when cla (setAC 0)
@@ -67,19 +67,17 @@ doOp3 cla micros =
                                     setAC 0)
        when (MQA `elem` micros) (modAC . (.|.) =<< getMQ)
 
-doIO :: IOOp -> PDP8 ()
-doIO KCF = setKeyboardFlag False
-doIO KSF = getKeyboardFlag >>= \b -> when b skip
-doIO KCC = setKeyboardFlag False >> setAC 0
-doIO KRS = getKB >>= \kb -> modAC (.|. kb)
-doIO KRB = setKeyboardFlag False >> getKB >>= setAC
-doIO TFL = return () -- error "TFL is a PDP-8/E only instruction"
-doIO TSF = getTeleprinterFlag >>= \b -> when b skip
-doIO TCF = setTeleprinterFlag False
-doIO TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0x7F) =<< getAC
-doIO TLS = doIO TPC >> setTeleprinterFlag False
-
-skip = modPC (+1)
+doIO :: Int12 -> IOOp -> PDP8 ()
+doIO iaddr KCF = setKeyboardFlag False
+doIO iaddr KSF = getKeyboardFlag >>= skipIf iaddr
+doIO iaddr KCC = setKeyboardFlag False >> setAC 0
+doIO iaddr KRS = getKB >>= \kb -> modAC (.|. kb)
+doIO iaddr KRB = setKeyboardFlag False >> getKB >>= setAC
+doIO iaddr TFL = return () -- error "TFL is a PDP-8/E only instruction"
+doIO iaddr TSF = getTeleprinterFlag >>= skipIf iaddr
+doIO iaddr TCF = setTeleprinterFlag False
+doIO iaddr TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0x7F) =<< getAC
+doIO iaddr TLS = doIO iaddr TPC >> setTeleprinterFlag False
 
 execute iaddr i addr@(Addr v) = do
        case i of

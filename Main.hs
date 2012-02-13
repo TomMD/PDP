@@ -2,7 +2,7 @@ module Main where
 
 import qualified CLI as CLI
 import Execute -- step :: PDP8 Bool (True == terminate?)
-import Memory (loadProgram)
+import Memory (loadProgram, store)
 import Monad
 import Parse
 import Prelude hiding (catch)
@@ -46,6 +46,9 @@ main
              do obj <- liftIO (readFile (fromJust (CLI.input o)))
                 lift2 (loadProgram (parseObj obj))
                 mapM_ addDebug (CLI.debug o)
+                case CLI.startingPC o of
+                  Nothing -> return ()
+                  Just pc -> lift2 (setPC pc)
                 run
                 mapM_ parseGetter (CLI.showAtEnd o)
                 case CLI.memoryLog o of
@@ -81,6 +84,11 @@ addDebug str = modify (\s -> DS $ unDS s >> outputStr (str ++ ": ") >> op)
 
 processCmd :: String -> MonadCLI ()
 processCmd "reset" = lift2 reset
+processCmd "addrload" = lift2 (setPC =<< getSR)
+processCmd "deposit" =
+      lift2 $ do a <- getPC
+                 store (Addr a) =<< getSR
+                 modPC (1+)
 processCmd i | "step" `isPrefixOf` i = do
       let nr = parseNum (drop 4 i)
       replicateM_ nr doStep
@@ -112,6 +120,9 @@ processCmd _ = do
         , "\tdebug <loc>       Each step, print the value at <location>"
         , "\tcleardebug        Don't print any value on each step"
         , "\treset             Reset all memory, registers, and stats (to zero)"
+        , "\taddrload          Loads the contents of SR into PC (substituting for the unimplemented CPMA)"
+        , "\tdeposit           Loads the contents of SR into the memory address in PC (substituting for"
+        , "\t                  CPMA) and increments PC"
         , "-----------"
         , "Locations:"
         , "\tstats             Statistics (not settable!)"
