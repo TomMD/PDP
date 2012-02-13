@@ -25,15 +25,20 @@ module Types
   , typeOf ) where
 
 import qualified Data.Map as M
+import qualified Data.DList as D
+import Data.DList (DList)
 import Data.Bits
 import Data.Char (digitToInt)
 import Numeric
 import Util
 
+instance (Show a) => Show (DList a) where
+  show = show . D.toList
+
 -- |Branches are recorded as (address of the branching instruction,
 -- target address)
-type BranchLog = [(Addr,Addr)]
-type MemoryLog = [(Purpose,Addr)]
+type BranchLog = DList (Addr,Addr)
+type MemoryLog = DList (Purpose,Addr)
 
 -- The Stats needing tracked for the assignment
 data Stats =
@@ -44,7 +49,7 @@ data Stats =
         , memoryLog      :: !MemoryLog
         }
 
-initialStats = Stats 0 0 M.empty [] []
+initialStats = Stats 0 0 M.empty D.empty D.empty
 
 -- The registers of a PDP8 are mostly
 -- 12 bit but there are two odd balls (ir,lb)
@@ -213,7 +218,7 @@ instance Num Int12 where
   (+) = modOp12 (+)
   (*) = modOp12 (*)
   (-) = modOp12 (-)
-  abs = Int12 . abs . unInt12
+  abs = (+0) . Int12 . abs . unInt12
   fromInteger i
      | i < (-2^11) = fromInteger (i + 2^12)
      | i > (2^11-1) = fromInteger (i - 2^12)
