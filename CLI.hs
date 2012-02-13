@@ -6,15 +6,16 @@ import System.Environment (getArgs)
 import System.Exit
 import System.IO (hPutStrLn, stderr)
 
-data Options = O { input      :: Maybe String
-                 , debug      :: [String]
-                 , showAtEnd  :: [String]
-                 , memoryLog  :: Maybe String
-                 , branchLog  :: Maybe String
-                 , statistics :: Maybe String
-                 , showHelp   :: Bool }
+data Options = O { input       :: Maybe String
+                 , debug       :: [String]
+                 , showAtEnd   :: [String]
+                 , memoryLog   :: Maybe String
+                 , branchLog   :: Maybe String
+                 , statistics  :: Maybe String
+                 , descriptive :: Bool
+                 , showHelp    :: Bool }
 
-defaultOptions = O Nothing [] [] Nothing Nothing Nothing False
+defaultOptions = O Nothing [] [] Nothing Nothing Nothing False False
 
 options :: [OptDescr (Options -> Options)]
 options = [ Option ['d'] ["debug"]
@@ -32,6 +33,9 @@ options = [ Option ['d'] ["debug"]
           , Option ['s'] ["statistics"]
                    (ReqArg (\x o -> o { statistics = Just x }) "FILE")
                    "Write statistics to FILE"
+          , Option [] ["descriptive-memory-log"]
+                   (NoArg (\o -> o { descriptive = True }))
+                   "Write descriptive types in memory log"
           , Option ['?'] ["help"]
                    (NoArg (\o -> o { showHelp = True }))
                    "Show usage information" ]

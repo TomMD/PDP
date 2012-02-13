@@ -32,6 +32,7 @@ module Monad
 import Prelude hiding (catch)
 import Control.Monad.State
 import Control.Monad.Writer
+import qualified Data.DList as D
 import Data.Maybe
 import System.Console.Haskeline.Class
 import Control.Monad.IO.Class
@@ -73,7 +74,7 @@ logBranch src target =
   modBranchLog (`D.snoc` (src,target))
 
 logMem :: Purpose -> Addr -> PDP8 ()
-logMem p a = modMemoryLog (`D.snoc` (p,a))
+logMem p a = modMemoryLog (flip D.snoc (p,a))
 
 getMemoryLog :: PDP8 MemoryLog
 getMemoryLog = PDP8 $ liftM memoryLog (lift get)

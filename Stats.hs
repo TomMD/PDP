@@ -20,20 +20,23 @@ import Numeric
 renderLogs :: Stats -> String
 renderLogs s =
   unlines [ "Memory Log:"
-          , renderMemoryLog (memoryLog s)
+          , renderMemoryLog True (memoryLog s)
           , "Branch Log:"
           , renderBranchLog (branchLog s)
           ]
 
-renderMemoryLog :: MemoryLog -> String
-renderMemoryLog
+renderMemoryLog :: Bool -> MemoryLog -> String
+renderMemoryLog descriptive
   = unlines
   . map (\(p,a) -> showB p ++ " " ++ show (unAddr a))
   . D.toList
   where
-    showB InstrFetch = "2 "
-    showB DataRead   = "0 "
-    showB DataWrite  = "1 "
+    showB InstrFetch | descriptive = "Instr Fetch"
+                     | otherwise   = "2"
+    showB DataRead   | descriptive = "Data Read  "
+                     | otherwise   = "0"
+    showB DataWrite  | descriptive = "Data Write "
+                     | otherwise   = "1"
 
 renderBranchLog :: BranchLog -> String
 renderBranchLog
@@ -48,7 +51,7 @@ renderStats (Stats cy tot inst bl ml) =
              , "Breakdown:        \n" ++ renderAll (M.toList inst)]
  where
   renderAll :: [(String,Integer)] -> String
-  renderAll = unlines . map ("                 " ++) . map renderLn
+  renderAll = unlines . map ("                " ++) . map renderLn
   renderLn :: (String,Integer) -> String
   renderLn (o,i) = o ++ " " ++ show i
 

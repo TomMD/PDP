@@ -50,7 +50,7 @@ main
                 mapM_ parseGetter (CLI.showAtEnd o)
                 case CLI.memoryLog o of
                   Nothing -> return ()
-                  Just fn -> liftIO . writeFile fn . renderMemoryLog =<< lift2 getMemoryLog
+                  Just fn -> liftIO . writeFile fn . renderMemoryLog (CLI.descriptive o) =<< lift2 getMemoryLog
                 case CLI.branchLog o of
                   Nothing -> return ()
                   Just fn -> liftIO . writeFile fn . renderBranchLog =<< lift2 getBranchLog
