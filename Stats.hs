@@ -12,6 +12,7 @@ import Parse
 import Types
 import Monad
 
+import Data.List (intercalate)
 import qualified Data.Map as M
 import qualified Data.DList as D
 import Control.DeepSeq
@@ -41,7 +42,15 @@ renderMemoryLog descriptive
 renderBranchLog :: BranchLog -> String
 renderBranchLog
   = unlines
-  . map (\(p,a) -> show p ++ " " ++ showOct (unAddr a) "")
+  . map (\(source,target,btype,taken) ->
+             intercalate " "
+                 [ showOct (unAddr source) ""
+                 , showOct (unAddr target) ""
+                 , case btype of
+                     JMSBranch  -> "JMS"
+                     JMPBranch  -> "JMP"
+                     SkipBranch -> "SKP"
+                 , if taken then "Taken" else "Not taken" ])
   . D.toList
 
 renderStats :: Stats -> String

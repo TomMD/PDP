@@ -10,6 +10,7 @@ module Types
   , Value(..)
   , Instr(..)
   , InstructionType(..)
+  , BranchType(..)
   , MicroOp1(..)
   , LogicalOp(..)
   , MicroOp2(..)
@@ -35,9 +36,10 @@ import Util
 instance (Show a) => Show (DList a) where
   show = show . D.toList
 
--- |Branches are recorded as (address of the branching instruction,
--- target address)
-type BranchLog = DList (Addr,Addr)
+ -- |Branches are recorded as (branch address, target address, branch type, whether taken)
+data BranchType = JMSBranch | JMPBranch | SkipBranch
+type BranchLog = DList (Addr,Addr,BranchType,Bool)
+
 type MemoryLog = DList (Purpose,Addr)
 
 -- The Stats needing tracked for the assignment

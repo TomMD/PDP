@@ -17,10 +17,10 @@ step = do iaddr <- getPC
           case i of
             UNK {} -> return () -- TODO: log
             OP1 cla micros logical -> doOp1 cla micros logical
-            OP2 cla invertAndUnion skips micros -> doOp2 cla invertAndUnion skips micros
+            OP2 cla invertAndUnion skips micros -> doOp2 iaddr cla invertAndUnion skips micros
             OP3 cla micros -> doOp3 cla micros
             IOT ioop -> doIO ioop
-            _ -> execute i =<< effectiveAddr i iaddr
+            _ -> execute iaddr i =<< effectiveAddr i iaddr
 
 doOp1 cla micros logical =
     do when cla (setAC 0)
@@ -43,7 +43,7 @@ doOp1 cla micros logical =
           chiNeq x y | x /= y    = 1
                      | otherwise = 0
 
-doOp2 cla invertAndUnion skips micros =
+doOp2 iaddr cla invertAndUnion skips micros =
     do logic invertAndUnion skips
        when cla (setAC 0)
        when (OSR `elem` micros) (modAC . (.|.) =<< getSR)
@@ -56,10 +56,10 @@ doOp2 cla invertAndUnion skips micros =
           check SZA = (== 0) `fmap` getAC
           check SNL = (/= 0) `fmap` getL
 
-          skipIf True  = logSkip >> modPC (1 +)
-          skipIf False = return ()
+          skipIf True  = logSkip True >> modPC (1 +)
+          skipIf False = logSkip False >> return ()
 
-          logSkip = getPC >>= \a -> logBranch (Addr $ a-1) (Addr $ a+1)
+          logSkip = logBranch (Addr iaddr) (Addr (iaddr + 2)) SkipBranch
 
 doOp3 cla micros =
     do when cla (setAC 0)
@@ -81,7 +81,7 @@ doIO TLS = doIO TPC >> setTeleprinterFlag False
 
 skip = modPC (+1)
 
-execute i addr@(Addr v) = do
+execute iaddr i addr@(Addr v) = do
        case i of
          AND {} -> load addr >>= \operand -> modAC (operand .&.)
          TAD {} -> do operand <- load addr
@@ -94,7 +94,9 @@ execute i addr@(Addr v) = do
                       when (operand == 0) (modPC (1+))
          DCA {} -> do store addr =<< getAC
                       setAC 0
-         JMS {} -> do store addr =<< getPC
+         JMS {} -> do store addr (iaddr + 1)
                       setPC (v + 1)
-         JMP {} -> setPC v
+                      logBranch (Addr iaddr) (Addr (v + 1)) JMSBranch True
+         JMP {} -> do logBranch (Addr iaddr) (Addr v) JMPBranch True
+                      setPC v
          _      -> return ()

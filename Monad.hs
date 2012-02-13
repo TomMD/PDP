@@ -69,9 +69,9 @@ isHalted  = gets halted
 reset :: PDP8 ()
 reset = setStats initialStats >> put initialState
 
-logBranch :: Addr -> Addr -> PDP8 ()
-logBranch src target =
-  modBranchLog (`D.snoc` (src,target))
+logBranch :: Addr -> Addr -> BranchType -> Bool -> PDP8 ()
+logBranch src target btype taken =
+  modBranchLog (flip D.snoc (src,target,btype,taken))
 
 logMem :: Purpose -> Addr -> PDP8 ()
 logMem p a = modMemoryLog (flip D.snoc (p,a))
