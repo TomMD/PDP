@@ -15,7 +15,6 @@ import Monad
 import Data.List (intercalate)
 import qualified Data.Map as M
 import qualified Data.DList as D
-import Control.DeepSeq
 import Numeric
 
 renderLogs :: Stats -> String
@@ -70,8 +69,7 @@ incStats i = modStats f
  where
    f (Stats cy tot bd x y) =
       let mp  = foldl incMnemonic bd (mnemonicOf i)
-          mp' = deepseq mp mp
-      in mp' `seq` Stats (cy + nrCycles i) (tot+1) mp' x y
+      in mp `seq` Stats (cy + nrCycles i) (tot+1) mp x y
    incMnemonic mp nic = M.insertWith (+) nic 1 mp
 
 mnemonicOf :: Instr -> [String]
