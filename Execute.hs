@@ -43,6 +43,11 @@ doOp1 cla micros logical =
           chiNeq x y | x /= y    = 1
                      | otherwise = 0
 
+skipIf True  = logSkip True >> modPC (1 +)
+skipIf False = logSkip False >> return ()
+
+logSkip = logBranch (Addr iaddr) (Addr (iaddr + 2)) SkipBranch
+
 doOp2 iaddr cla invertAndUnion skips micros =
     do logic invertAndUnion skips
        when cla (setAC 0)
@@ -56,10 +61,7 @@ doOp2 iaddr cla invertAndUnion skips micros =
           check SZA = (== 0) `fmap` getAC
           check SNL = (/= 0) `fmap` getL
 
-          skipIf True  = logSkip True >> modPC (1 +)
-          skipIf False = logSkip False >> return ()
 
-          logSkip = logBranch (Addr iaddr) (Addr (iaddr + 2)) SkipBranch
 
 doOp3 cla micros =
     do when cla (setAC 0)
@@ -69,17 +71,15 @@ doOp3 cla micros =
 
 doIO :: IOOp -> PDP8 ()
 doIO KCF = setKeyboardFlag False
-doIO KSF = getKeyboardFlag >>= \b -> when b skip
+doIO KSF = getKeyboardFlag >>= skipIf
 doIO KCC = setKeyboardFlag False >> setAC 0
 doIO KRS = getKB >>= \kb -> modAC (.|. kb)
 doIO KRB = setKeyboardFlag False >> getKB >>= setAC
 doIO TFL = return () -- error "TFL is a PDP-8/E only instruction"
-doIO TSF = getTeleprinterFlag >>= \b -> when b skip
+doIO TSF = getTeleprinterFlag >>= skipIf
 doIO TCF = setTeleprinterFlag False
 doIO TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0x7F) =<< getAC
 doIO TLS = doIO TPC >> setTeleprinterFlag False
-
-skip = modPC (+1)
 
 execute iaddr i addr@(Addr v) = do
        case i of
