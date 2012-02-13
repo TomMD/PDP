@@ -1,0 +1,19 @@
+== METHOD ==
+1) Test Parsing
+Take assembly, assemble it, parse it, compare.
+
+RESULTS: Things look good after the parser overhall of '98, but the assembler sucks.
+
+2) Test Instructions
+Take object code, parse it, step through it, compare interpreter results with human expectations.
+
+RESULTS: Some instructions were wrong (ex: effectiveAddress calculation, left rotate) and some more assembler bugs popped up (ex: label address).
+
+3) Test Programs
+Take the object code of a program, run it and compare results with expectations.
+
+REULTS:
+add01 works
+euler24 doesn't terminate - probably an assembler issue.
+hello-world and countBinOnes works after manually fixing object code
+
