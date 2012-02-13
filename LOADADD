@@ -1,0 +1,24 @@
+set sr 200
+addrload
+set sr 7300
+deposit
+set sr 1250
+deposit
+set sr 1251
+deposit
+set sr 3252
+deposit
+set sr 7402
+deposit
+set sr 5200
+deposit
+set sr 250
+addrload
+set sr 2
+deposit
+set sr 3
+deposit
+set sr 200
+addrload
+run
+show mem
