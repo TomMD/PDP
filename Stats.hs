@@ -13,6 +13,8 @@ import Types
 import Monad
 
 import qualified Data.Map as M
+import qualified Data.DList as D
+import Control.DeepSeq
 import Numeric
 
 renderLogs :: Stats -> String
@@ -27,15 +29,17 @@ renderMemoryLog :: MemoryLog -> String
 renderMemoryLog
   = unlines
   . map (\(p,a) -> showB p ++ " " ++ show (unAddr a))
+  . D.toList
   where
-    showB InstrFetch = "Instr Fetch"
-    showB DataRead   = "Data Read  "
-    showB DataWrite  = "Data Write "
+    showB InstrFetch = "2 "
+    showB DataRead   = "0 "
+    showB DataWrite  = "1 "
 
 renderBranchLog :: BranchLog -> String
 renderBranchLog
   = unlines
   . map (\(p,a) -> show p ++ " " ++ showOct (unAddr a) "")
+  . D.toList
 
 renderStats :: Stats -> String
 renderStats (Stats cy tot inst bl ml) =
@@ -48,11 +52,14 @@ renderStats (Stats cy tot inst bl ml) =
   renderLn :: (String,Integer) -> String
   renderLn (o,i) = o ++ " " ++ show i
 
--- |Increment the instruction AND cylce count
+-- |Increment the instruction AND cycle count
 incStats :: Instr -> PDP8 ()
 incStats i = modStats f
  where
-   f (Stats cy tot bd x y) = Stats (cy + nrCycles i) (tot+1) (foldl incMnemonic bd (mnemonicOf i)) x y
+   f (Stats cy tot bd x y) =
+      let mp  = foldl incMnemonic bd (mnemonicOf i)
+          mp' = deepseq mp mp
+      in mp' `seq` Stats (cy + nrCycles i) (tot+1) mp' x y
    incMnemonic mp nic = M.insertWith (+) nic 1 mp
 
 mnemonicOf :: Instr -> [String]
