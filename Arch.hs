@@ -1,8 +1,6 @@
 module Arch
   ( nrCycles
   , addrMode, AddrMode(..)
-    -- Helpers
-  , addrModeIndirect, addrModeAutoIndexing, addrModeDirect
   ) where
 
 import Data.Char (isOctDigit)
@@ -14,27 +12,25 @@ import Util
 
 -- FIXME put any constants here!  Constants such as the auto-increment values.
 
-nrCyclesOp :: Integral a => InstructionType -> a
-nrCyclesOp MemOp     = 2
-nrCyclesOp IOOp      = 0
-nrCyclesOp UnknownOp = 0
-nrCyclesOp _         = 1 -- micro ops
-
 nrCycles :: Integral a => Instr -> a
-nrCycles i =
-    case typeOf i of
-      MemOp | addrModeAutoIndexing i -> 2 + nrCyclesOp MemOp
-            | addrModeIndirect i     -> 1 + nrCyclesOp MemOp
-      t                              -> nrCyclesOp t
+nrCycles i = nrCyclesOp i + nrCyclesMem i
 
-addrModeIndirect :: Instr -> Bool
-addrModeIndirect = (== ModeIndirect) . addrMode
+nrCyclesOp :: Integral a => Instr -> a
+nrCyclesOp (IOT {})   = 0
+nrCyclesOp (OP1 {})   = 1
+nrCyclesOp (OP2 {})   = 1
+nrCyclesOp (OP3 {})   = 1
+nrCyclesOp (UNK {})   = 0
+nrCyclesOp (JMP {})   = 1
+nrCyclesOp _          = 2 -- Memory Op
 
-addrModeAutoIndexing :: Instr -> Bool
-addrModeAutoIndexing = (== ModeAutoIndexing) . addrMode
-
-addrModeDirect :: Instr -> Bool
-addrModeDirect = (== ModeDirect) . addrMode
+nrCyclesMem :: Integral a => Instr -> a
+nrCyclesMem i =
+  case addrMode i of
+    ModeAutoIndexing   -> 2
+    ModeIndirect       -> 1
+    ModeDirect         -> 0
+    NonMemoryOperation -> 0
 
 data AddrMode = ModeIndirect | ModeDirect | ModeAutoIndexing | NonMemoryOperation
               deriving (Eq, Ord, Show)
