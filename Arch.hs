@@ -10,8 +10,6 @@ import Monad
 import Types
 import Util
 
--- FIXME put any constants here!  Constants such as the auto-increment values.
-
 nrCycles :: Integral a => Instr -> a
 nrCycles i = nrCyclesOp i + nrCyclesMem i
 
@@ -32,14 +30,17 @@ nrCyclesMem i =
     ModeDirect         -> 0
     NonMemoryOperation -> 0
 
-data AddrMode = ModeIndirect | ModeDirect | ModeAutoIndexing | NonMemoryOperation
+data AddrMode = ModeIndirect | ModeDirect
+              | ModeAutoIndexing | NonMemoryOperation
               deriving (Eq, Ord, Show)
 
 addrMode :: Instr -> AddrMode
 addrMode i =
     case typeOf i of
       MemOp -> case indirection i of
-                 Indirect | page i == ZeroPage && offset i >= oct 10 && offset i <= oct 17 -> ModeAutoIndexing
-                          | otherwise                                                      -> ModeIndirect
-                 Direct                                                                    -> ModeDirect
+                 Indirect | page i == ZeroPage &&
+                            offset i >= oct 10 &&
+                            offset i <= oct 17 -> ModeAutoIndexing
+                          | otherwise          -> ModeIndirect
+                 Direct                        -> ModeDirect
       _     -> NonMemoryOperation

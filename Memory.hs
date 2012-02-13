@@ -18,29 +18,25 @@ import Stats
 import Types
 import Util
 
--- Utilities --
-incPC :: PDP8 ()
-incPC = modPC (+1)
-
 findWithDefault d k m = fromMaybe d (M.lookup k m)
--- End Utilities --
 
 -- Memory Operations --
 
--- |load a value from a given address.  If this is for instructions, use 'fetch' instead.
+-- Load a value from a given address.  If this is for instructions, use 'fetch'
+-- instead.
 load :: Addr -> PDP8 Int12
 load a =
   logMem DataRead a >>
   gets (findWithDefault 0 a . mem)
 
--- |Store a 'Int12' at a given memory address
+-- Store a 'Int12' at a given memory address
 store :: Addr -> Int12 -> PDP8 ()
 store a i =
   logMem DataWrite a >>
   modMem (M.insert a i)
 
--- |Fetch and decode an instruction from a memory address
--- Increments the PC and stores the latest instruction in the IR
+-- Fetch and decode an instruction from a memory address; returns the decoded
+-- instruction and stores it in IR.
 fetchInstruction :: Addr -> PDP8 Instr
 fetchInstruction a = do
   logMem InstrFetch a
@@ -50,9 +46,8 @@ fetchInstruction a = do
   incStats i
   return i
 
--- |Given the newly fetched instruction, which must be a memory
--- operation, returns the effective address while performing any
--- needed auto-incrementing (costing an additional load and store - correct? TODO CHECKME).
+-- Given an instruction aid its address, returns the effective address while
+-- performing any needed auto-incrementing.
 effectiveAddr :: Instr -> Int12 -> PDP8 Addr
 effectiveAddr i iaddr =
     case typeOf i of
@@ -74,10 +69,10 @@ effectiveAddr i iaddr =
               in case mode of
                    ModeIndirect -> liftM Addr (load eAddr)
                    ModeDirect   -> return eAddr
-                   ModeAutoIndexing -> error "addrMode is broken - autoindexing is not valid with the CurrentPage bit set."
+                   ModeAutoIndexing -> error "addrMode: autoindexing with CurrentPage"
 
--- |Given a list of values produced by parseObj, load the data into
--- memory. N.B. 'loadProgram' won't adjust the memory access counters!
+-- Given a list of values produced by parseObj, load the data into
+-- memory; doesn't affect memory loads or access counters.
 loadProgram :: [Value] -> PDP8 ()
 loadProgram values =
  do go (Addr 0) values
@@ -93,19 +88,3 @@ loadProgram values =
    startAddr (VAddr (Addr a) : _)   = a
    startAddr (VInstr _ : vs) = startAddr vs
    startAddr []              = 0
-
--- Only needed if we don't force this property
--- by some sort of smart constructor.  Good idea?
-sanityCheck :: PDP8 ()
-sanityCheck = do
-  m <- gets mem
-  let as = M.keys m
-      es = M.elems m
-  if not (all addrValid as)
-     then error $ "Invalid addresses: " ++ show m
-     else if not (all memValid es)
-           then error $ "Invalid memory: " ++ show m
-           else return ()
- where
- addrValid a = a < Addr (2^12)
- memValid  e = (-1)*2^11 < e && e < 2^11 - 1

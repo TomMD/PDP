@@ -43,7 +43,8 @@ import qualified Data.DList as D
 import Types
 import Util
 
-newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats (HaskelineT IO)) a }
+newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState
+                                         (StateT Stats (HaskelineT IO)) a }
   deriving (MonadState MachineState, Monad, Functor)
 
 instance MonadHaskeline PDP8 where
@@ -85,7 +86,8 @@ setMemoryLog :: MemoryLog -> PDP8 ()
 setMemoryLog = modMemoryLog . const
 
 modMemoryLog :: (MemoryLog -> MemoryLog) -> PDP8()
-modMemoryLog f = PDP8 $ lift $ modify (\st -> st { memoryLog = f (memoryLog st) } )
+modMemoryLog f = PDP8 $ lift $
+                 modify (\st -> st { memoryLog = f (memoryLog st) } )
 
 getBranchLog :: PDP8 BranchLog
 getBranchLog = PDP8 $ liftM branchLog (lift get)
@@ -94,7 +96,8 @@ setBranchLog :: BranchLog -> PDP8 ()
 setBranchLog = modBranchLog . const
 
 modBranchLog :: (BranchLog -> BranchLog) -> PDP8 ()
-modBranchLog f = PDP8 $ lift $ modify (\st -> st { branchLog = f (branchLog st) } )
+modBranchLog f = PDP8 $ lift $
+                 modify (\st -> st { branchLog = f (branchLog st) } )
 
 modMem :: (Memory -> Memory) -> PDP8 ()
 modMem f = modify (\s -> s { mem = f (mem s)})
@@ -166,9 +169,11 @@ setKeyboardFlag _ = return ()
 getKeyboardFlag :: PDP8 Bool
 getKeyboardFlag = return True
 
--- We currently print a prompt asking the user for a character, but that can change.
+-- We currently print a prompt asking the user for a character, but that can
+-- change.
 getKB :: PDP8 Int12
-getKB = liftM (fromIntegral . (.|. ob 10000000) . fromEnum . fromMaybe 'X') (getInputChar "->")
+getKB = liftM (fromIntegral . (.|. ob 10000000) . fromEnum . fromMaybe 'X')
+              (getInputChar "->")
 
 evalPDP8 :: PDP8 a -> IO a
 evalPDP8 = liftM (\(_,_,a) -> a) . runPDP8

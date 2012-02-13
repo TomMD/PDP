@@ -15,11 +15,16 @@ step = do iaddr <- getPC
           modPC (1+)
           i <- fetchInstruction (Addr iaddr)
           case i of
-            UNK {} -> return () -- TODO: log
-            OP1 cla micros logical -> doOp1 cla micros logical
-            OP2 cla invertAndUnion skips micros -> doOp2 iaddr cla invertAndUnion skips micros
-            OP3 cla micros -> doOp3 cla micros
-            IOT ioop -> doIO iaddr ioop
+            UNK {} ->
+                return ()
+            OP1 cla micros logical ->
+                doOp1 cla micros logical
+            OP2 cla invertAndUnion skips micros ->
+                doOp2 iaddr cla invertAndUnion skips micros
+            OP3 cla micros ->
+                doOp3 cla micros
+            IOT ioop ->
+                doIO iaddr ioop
             _ -> execute iaddr i =<< effectiveAddr i iaddr
 
 doOp1 cla micros logical =
@@ -38,8 +43,10 @@ doOp1 cla micros logical =
                                       low  = (a .&. oct 0077) `shiftL` 6
                                   in low .|. high)
     where rotL, rotR :: (Int,Int12) -> (Int,Int12)
-          rotL (l, a) = (chiNeq (a .&. oct 4000) 0, a `shiftL` 1 .|. fromIntegral l)
-          rotR (l, a) = (chiNeq (a .&. 1) 0, fromIntegral (l `shiftL` 11) .|. a `shiftR` 1)
+          rotL (l, a) = ( chiNeq (a .&. oct 4000) 0
+                        , a `shiftL` 1 .|. fromIntegral l )
+          rotR (l, a) = ( chiNeq (a .&. 1) 0
+                        , fromIntegral (l `shiftL` 11) .|. a `shiftR` 1 )
           chiNeq x y | x /= y    = 1
                      | otherwise = 0
 
@@ -76,7 +83,8 @@ doIO iaddr KRB = setKeyboardFlag False >> getKB >>= setAC
 doIO iaddr TFL = return () -- error "TFL is a PDP-8/E only instruction"
 doIO iaddr TSF = getTeleprinterFlag >>= skipIf iaddr
 doIO iaddr TCF = setTeleprinterFlag False
-doIO iaddr TPC = outputStr . (\c -> [c]) . toEnum . fromIntegral . (.&. 0x7F) =<< getAC
+doIO iaddr TPC = outputStr . (\c -> [c]) . toEnum
+                 . fromIntegral . (.&. 0x7F) =<< getAC
 doIO iaddr TLS = doIO iaddr TPC >> setTeleprinterFlag False
 
 execute iaddr i addr@(Addr v) = do
@@ -86,7 +94,9 @@ execute iaddr i addr@(Addr v) = do
                       a <- getAC
                       let sum = a + operand
                       setAC sum
-                      when (signum a == signum operand && signum a /= signum sum) (modL complement)
+                      when (signum a == signum operand
+                            && signum a /= signum sum)
+                           (modL complement)
          ISZ {} -> do operand <- fmap (+1) (load addr)
                       store addr operand
                       when (operand == 0) (modPC (1+))

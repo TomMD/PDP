@@ -36,7 +36,8 @@ parseObj = lexer . map (filter isDigit) . lines
 -- and produces "Values" in the form of memory addresses or instructions.
 lexer :: [String] -> [Value]
 lexer [] = []
-lexer [l] = error $ "PDP8 object format should have an even number of lines, but there exists a lone trailing line of: " ++ l
+lexer [l] = error $ "PDP8 object format should have an even number of lines, \
+                    \but there exists a lone trailing line of: " ++ l
 lexer (a:b:is) = lexx a b : lexer is
 
 -- Lexx is the most powerful destructive weapon in the two universes.
@@ -85,7 +86,8 @@ decodeMemInstr op i = opCon op ind mempg off
  off   = i .&. ob 1111111
 
 decodeMicro :: [(Int,a)] -> Int12 -> (Bool, [a])
-decodeMicro masks i = (testBit i 7, map snd (filter (\(bit, _) -> testBit i bit) masks))
+decodeMicro masks i = ( testBit i 7
+                      , map snd (filter (\(bit, _) -> testBit i bit) masks) )
 
 decodeIOInstr :: Int12 -> Instr
 decodeIOInstr i
@@ -107,11 +109,16 @@ decodeIOInstr i
   | otherwise     = Nothing
 
 decodeMicroInstr1 :: Int12 -> Maybe Instr
-decodeMicroInstr1 i = case (testBit i 3, testBit i 2, testBit i 1) of
-                        (True, False, b)  -> Just (OP1 cla ops (if b then Just RTR else Just RAR))
-                        (False, True, b)  -> Just (OP1 cla ops (if b then Just RTL else Just RAL))
-                        (False, False, b) -> Just (OP1 cla ops (if b then Just BSW else Nothing))
-                        _                 -> Nothing
+decodeMicroInstr1 i =
+    case (testBit i 3, testBit i 2, testBit i 1) of
+      (True, False, b) ->
+          Just (OP1 cla ops (if b then Just RTR else Just RAR))
+      (False, True, b) ->
+          Just (OP1 cla ops (if b then Just RTL else Just RAL))
+      (False, False, b) ->
+          Just (OP1 cla ops (if b then Just BSW else Nothing))
+      _ ->
+          Nothing
     where (cla, ops) = decodeMicro microOp1Masks i
 
 decodeMicroInstr2 :: Int12 -> Instr

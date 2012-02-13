@@ -29,10 +29,6 @@ noDebug = DS (return ())
 
 type MonadCLI a = StateT DebugOp PDP8 a
 
--- However many liftings are needed for the PDP8 monad
--- embedded in MonadCLI
-lift2 = lift
-
 prompt = "# "
 
 main
@@ -44,22 +40,28 @@ main
          Just o  ->
              runPDP8 $ flip runStateT noDebug $
              do obj <- liftIO (readFile (fromJust (CLI.input o)))
-                lift2 (loadProgram (parseObj obj))
+                lift (loadProgram (parseObj obj))
                 mapM_ addDebug (CLI.debug o)
                 case CLI.startingPC o of
                   Nothing -> return ()
-                  Just pc -> lift2 (setPC pc)
+                  Just pc -> lift (setPC pc)
                 run
                 mapM_ parseGetter (CLI.showAtEnd o)
                 case CLI.memoryLog o of
                   Nothing -> return ()
-                  Just fn -> liftIO . writeFile fn . renderMemoryLog (CLI.descriptive o) =<< lift2 getMemoryLog
+                  Just fn -> liftIO . writeFile fn .
+                             renderMemoryLog (CLI.descriptive o) =<<
+                             lift getMemoryLog
                 case CLI.branchLog o of
                   Nothing -> return ()
-                  Just fn -> liftIO . writeFile fn . renderBranchLog =<< lift2 getBranchLog
+                  Just fn -> liftIO . writeFile fn .
+                             renderBranchLog =<<
+                             lift getBranchLog
                 case CLI.statistics o of
                   Nothing -> return ()
-                  Just fn -> liftIO . writeFile fn . renderStats =<< lift2 getStats
+                  Just fn -> liftIO . writeFile fn .
+                             renderStats =<<
+                             lift getStats
 
 loop :: MonadCLI ()
 loop = do
@@ -75,7 +77,7 @@ loop = do
     process "quit" = return False
     process s = do
       processCmd s
-      b <- lift2 isHalted
+      b <- lift isHalted
       return True
 
 addDebug :: String -> MonadCLI ()
@@ -83,12 +85,12 @@ addDebug str = modify (\s -> DS $ unDS s >> outputStr (str ++ ": ") >> op)
     where op = parseGetter (filter isAlpha str)
 
 processCmd :: String -> MonadCLI ()
-processCmd "reset" = lift2 reset
-processCmd "addrload" = lift2 (setPC =<< getSR)
+processCmd "reset" = lift reset
+processCmd "addrload" = lift (setPC =<< getSR)
 processCmd "deposit" =
-      lift2 $ do a <- getPC
-                 store (Addr a) =<< getSR
-                 modPC (1+)
+      lift $ do a <- getPC
+                store (Addr a) =<< getSR
+                modPC (1+)
 processCmd i | "step" `isPrefixOf` i = do
       let nr = parseNum (drop 4 i)
       replicateM_ nr doStep
@@ -100,12 +102,12 @@ processCmd i | "debug " `isPrefixOf` i =
       addDebug (drop 6 i)
 processCmd i | "load " `isPrefixOf` i = do
       let f = drop 5 i
-      lift2 reset
+      lift reset
       let hdl :: SomeException -> MonadCLI ()
           hdl _ = outputStrLn "Error loading object file!"
       catch (do
-        cont <- liftIO (readFile $ filter (/= '"') f)
-        lift2 $ loadProgram (parseObj cont)) hdl
+        cont <- liftIO (readFile $ filter ('"' /=) f)
+        lift $ loadProgram (parseObj cont)) hdl
 processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
 processCmd _ = do
@@ -143,18 +145,18 @@ parseNum "" = 1
 parseNum s = read . ('0':) . filter isDigit $ s
 
 parseGetter :: String -> MonadCLI ()
-parseGetter "stats" = lift2 getStats >>= outputStrLn . renderStats
-parseGetter "logs"  = lift2 getStats >>= outputStrLn . renderLogs
+parseGetter "stats" = lift getStats >>= outputStrLn . renderStats
+parseGetter "logs"  = lift getStats >>= outputStrLn . renderLogs
 parseGetter "mem"   = do
-  m <- lift2 getMem
+  m <- lift getMem
   outputStr . unlines
        . map (\(a,v) -> show4 (unAddr a) ++ " -> " ++ show4 v)
        . M.toList $ m
-parseGetter "pc"    = lift2 getPC    >>= prnt
-parseGetter "ac"    = lift2 getAC    >>= prnt
-parseGetter "l"     = lift2 getL     >>= prnt
-parseGetter "sr"    = lift2 getSR    >>= prnt
-parseGetter "ir"    = lift2 getIR    >>= prnt . decodeInstr
+parseGetter "pc"    = lift getPC    >>= prnt
+parseGetter "ac"    = lift getAC    >>= prnt
+parseGetter "l"     = lift getL     >>= prnt
+parseGetter "sr"    = lift getSR    >>= prnt
+parseGetter "ir"    = lift getIR    >>= prnt . decodeInstr
 parseGetter _       = outputStrLn "Unknown location for read operation!"
 
 setVal :: String -> MonadCLI ()
@@ -165,23 +167,23 @@ setVal str =
       locO  = Addr . octS $ locOS
       valO2 = octS valO2S
   in case filter isAlpha locS of
-    "mem" -> lift2 (modMem (M.insert locO valO2))
-    "pc"  -> lift2 . setPC $ valO
-    "ac"  -> lift2 . setAC $ valO
-    "l"   -> lift2 . setL . fromIntegral $valO
-    "sr"  -> lift2 . setSR $ valO
-    "ir"  -> lift2 . setIR $ valO
+    "mem" -> lift (modMem (M.insert locO valO2))
+    "pc"  -> lift . setPC $ valO
+    "ac"  -> lift . setAC $ valO
+    "l"   -> lift . setL . fromIntegral $valO
+    "sr"  -> lift . setSR $ valO
+    "ir"  -> lift . setIR $ valO
     _     -> outputStrLn "Unknown location for write operation!"
 
 -- Returns true if halted
 doStep :: MonadCLI Bool
 doStep = do
-  h <- lift2 isHalted
+  h <- lift isHalted
   if h then return True
-    else do b <- lift2 step
+    else do b <- lift step
             s <- get
             unDS s
-            res <- lift2 isHalted
+            res <- lift isHalted
             when res (outputStrLn "Program HALTed")
             return res
 
