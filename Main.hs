@@ -46,6 +46,9 @@ main
              do obj <- liftIO (readFile (fromJust (CLI.input o)))
                 lift2 (loadProgram (parseObj obj))
                 mapM_ addDebug (CLI.debug o)
+                case CLI.startingPC o of
+                  Nothing -> return ()
+                  Just pc -> lift2 (setPC pc)
                 run
                 mapM_ parseGetter (CLI.showAtEnd o)
                 case CLI.memoryLog o of
