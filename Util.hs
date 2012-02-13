@@ -4,7 +4,7 @@ import Numeric (readOct)
 import Data.Char
 import Data.Bits
 
-show4 :: Integral a => a -> String
+show4 :: (Show a, Integral a) => a -> String
 show4 = reverse . take 4 . reverse . ("0000" ++) . show
 
 -- Interprete a numeric literal as octal
