@@ -2,7 +2,7 @@ module Main where
 
 import qualified CLI as CLI
 import Execute -- step :: PDP8 Bool (True == terminate?)
-import Memory (loadProgram)
+import Memory (loadProgram, store)
 import Monad
 import Parse
 import Prelude hiding (catch)
@@ -84,6 +84,11 @@ addDebug str = modify (\s -> DS $ unDS s >> outputStr (str ++ ": ") >> op)
 
 processCmd :: String -> MonadCLI ()
 processCmd "reset" = lift2 reset
+processCmd "addrload" = lift2 (setPC =<< getSR)
+processCmd "deposit" =
+      lift2 $ do a <- getPC
+                 store (Addr a) =<< getSR
+                 modPC (1+)
 processCmd i | "step" `isPrefixOf` i = do
       let nr = parseNum (drop 4 i)
       replicateM_ nr doStep
