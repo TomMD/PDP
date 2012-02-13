@@ -34,12 +34,14 @@ import Control.Monad.State
 import Control.Monad.Writer
 import qualified Data.DList as D
 import Data.Maybe
+import Data.Bits
 import System.Console.Haskeline.Class
 import Control.Monad.IO.Class
 
 import qualified Data.DList as D
 
 import Types
+import Util
 
 newtype PDP8 a = PDP8 { unPDP8 :: StateT MachineState (StateT Stats (HaskelineT IO)) a }
   deriving (MonadState MachineState, Monad, Functor)
@@ -166,7 +168,7 @@ getKeyboardFlag = return True
 
 -- We currently print a prompt asking the user for a character, but that can change.
 getKB :: PDP8 Int12
-getKB = liftM (fromIntegral . fromEnum . fromMaybe 'X') (getInputChar "->")
+getKB = liftM (fromIntegral . (.|. ob 10000000) . fromEnum . fromMaybe 'X') (getInputChar "->")
 
 evalPDP8 :: PDP8 a -> IO a
 evalPDP8 = liftM (\(_,_,a) -> a) . runPDP8
