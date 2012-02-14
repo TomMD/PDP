@@ -86,7 +86,6 @@ addDebug str = modify (\s -> s { perStep = perStep s >> outputStr (str ++ ": ") 
     where op = parseGetter (filter isAlpha str)
 
 processCmd :: String -> MonadCLI ()
-processCmd "clearbp" = modify (\s -> s { breakPoints = [] })
 processCmd "reset" = lift reset
 processCmd "addrload" = lift (setPC =<< getSR)
 processCmd "deposit" =
@@ -99,7 +98,6 @@ processCmd i | "step" `isPrefixOf` i = do
 processCmd "run" = run
 processCmd i | "show " `isPrefixOf` i = do
       parseGetter (drop 5 i)
-processCmd "cleardebug" = modify (const noDebug)
 processCmd i | "debug " `isPrefixOf` i =
       addDebug (drop 6 i)
 processCmd i | "load " `isPrefixOf` i = do
@@ -112,6 +110,17 @@ processCmd i | "load " `isPrefixOf` i = do
         lift $ loadProgram (parseObj cont)) hdl
 processCmd i | "set " `isPrefixOf` i = do
       setVal (drop 4 i)
+processCmd i | "clear" `isPrefixOf` i = do
+      case (drop 6 i) of
+        "breakpoints" -> clearBreaks
+        "bp"    -> clearBreaks
+        "b"     -> clearBreaks
+        "debug" -> clearDebug
+        "d"     -> clearDebug
+        ""      -> put noDebug
+  where
+  clearBreaks = modify (\s -> s { breakPoints = [] })
+  clearDebug  = modify (\s -> s { perStep = return () })
 processCmd _ = do
       outputStrLn $ unlines
         [ "PDP8 Interpreter (by Thomas DuBuisson & Garrett Morris)"
@@ -122,12 +131,11 @@ processCmd _ = do
         , "\tset <loc>         Set the value of a particular location"
         , "\tload <file>       Load an octal .obj file"
         , "\tdebug <loc>       Each step, print the value at <location>"
-        , "\tcleardebug        Don't print any value on each step"
         , "\treset             Reset all memory, registers, and stats (to zero)"
         , "\taddrload          Loads the contents of SR into PC (substituting for the unimplemented CPMA)"
         , "\tdeposit           Loads the contents of SR into the memory address in PC (substituting for"
-        , "\tclearbp           Clear all breakpoints"
         , "\t                  CPMA) and increments PC"
+        , "\tclear {bp,debug,} Clear all {breakpoints, per step debugging, both}"
         , "-----------"
         , "Locations:"
         , "\tstats             Statistics (not settable!)"
