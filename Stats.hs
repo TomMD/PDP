@@ -82,8 +82,20 @@ mnemonicOf (JMS {}) = ["JMS"]
 mnemonicOf (JMP {}) = ["JMP"]
 mnemonicOf (IOT i)  = [show i]
 mnemonicOf (OP1 {..}) =
-  let c = (if cla then ("CLA" :) else id)
-  in c (map show micros1) ++ map show (maybeToList logical)
-mnemonicOf (OP2 {..}) = map show micros2
-mnemonicOf (OP3 {..}) = (if cla then ("CLA" :) else id) (map show micros3)
+  let logicalL = maybeToList logical
+      res = claStr cla (map show micros1) ++ map show logicalL
+  in if null res then ["NOP"] else res
+mnemonicOf (OP2 {..}) = claStr cla $ map show micros2 ++ showM skips
+ where
+  showM | invertAndUnion = \x ->
+             let f y = case y of
+                        SMA -> "SPA"
+                        SZA -> "SNA"
+                        SNL -> "SZL"
+             in if null x then ["SKP"]
+                          else map f x
+        | otherwise      = map show
+mnemonicOf (OP3 {..}) = claStr cla (map show micros3)
 mnemonicOf (UNK {}) = ["UNK"]
+
+claStr b = if b then ("CLA" :) else id
