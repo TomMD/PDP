@@ -203,7 +203,7 @@ doStep = do
             s <- get
             perStep s
             res <- lift isHalted
-            when res (outputStrLn "Program HALTed")
+            when res (outputStrLn "\nProgram HALTed")
             return res
 
 prnt :: (Show a) => a -> MonadCLI ()
