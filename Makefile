@@ -3,3 +3,6 @@ all:
 
 qc:
 	ghc --make -O -hidir obj -odir obj -o qc QC.hs
+
+paper:
+	pdflatex report.tex

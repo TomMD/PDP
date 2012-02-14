@@ -3,18 +3,22 @@
 \usepackage{amsmath,verbatim,multicol}
 \usepackage[compact]{titlesec}
 \usepackage{mdwlist}
+\usepackage[left=2.2cm,top=1cm,right=2.2cm,nohead,nofoot,bottom=1cm]{geometry}
+\usepackage[compact]{titlesec}
+\titlespacing{\section}{0pt}{*0}{*0}
+\titlespacing{\subsection}{0pt}{*0}{*0}
+\titlespacing{\subsubsection}{0pt}{*0}{*0}
 
 \setlength{\parskip}{5pt}
 \setlength{\parindent}{0pt}
-\setlength{\headsep}{0pt}
-\setlength{\topskip}{0pt}
-\setlength{\topmargin}{0pt}
-\setlength{\topsep}{0pt}
-\setlength{\partopsep}{0pt}
+%\setlength{\headsep}{0pt}
+%\setlength{\topskip}{0pt}
+%\setlength{\topmargin}{0pt}
+%\setlength{\topsep}{0pt}
+%\setlength{\partopsep}{0pt}
 
 \title{PDP/8 Simulator in Haskell}
 \author{Thomas DuBuisson and Garrett Morris}
-% \date{February 13, 2012}
 
 \def\inl#1{\texttt{#1}}
 \def\Int{\texttt{Int12}}
@@ -57,14 +61,13 @@ transition functions for an underlying state type.
 
 \section{Features}
 Features include:
-{\small
 \begin{itemize*}
 \item Command line as well as REPL interfaces.
 \item Flexible execution: single instruction stepping, multi-stepping, and execution that continutes until hitting a break-point.
 \item Flexible setting and reading of memory and registers (including the switch register).
 \item Logging of instruction counts, cycles, branch log, and memory accesses.
 \end{itemize*}
-}
+
 \section{Test Strategy}
 Early testing involved using a Haskell interpreter (GHCi) to
 investigate internal data structures.  Once an operational PDP/8
@@ -98,7 +101,7 @@ indirect addressing, our test programs included:
 An example run of the countbinOnes.as program:
 
 \begin{multicols}{2}
-{\scriptsize
+{\small
 \begin{verbatim}
 # load test/countBinOnes.obj
 # run
@@ -115,6 +118,21 @@ Breakdown:
                 JMP 2
                 RAL 3
                 TAD 1
+# show stats
+Total instructions: 19
+Total cycles:       23
+Breakdown:        
+                CLA 1
+                CLL 3
+                DCA 1
+                HLT 1
+                ISZ 2
+                JMP 2
+                RAL 3
+                SNA 3
+                SNL 3
+                TAD 1
+
 # show logs
 Memory Log:
 Instr Fetch 200
