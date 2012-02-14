@@ -13,6 +13,7 @@ import Parse
 import Types
 
 import Data.List (intercalate)
+import Data.Maybe
 import Numeric
 import qualified Data.DList as D
 import qualified Data.Map as M
@@ -80,7 +81,9 @@ mnemonicOf (DCA {}) = ["DCA"]
 mnemonicOf (JMS {}) = ["JMS"]
 mnemonicOf (JMP {}) = ["JMP"]
 mnemonicOf (IOT i)  = [show i]
-mnemonicOf (OP1 {..}) = (if cla then ("CLA" :) else id) (map show micros1)
+mnemonicOf (OP1 {..}) =
+  let c = (if cla then ("CLA" :) else id)
+  in c (map show micros1) ++ map show (maybeToList logical)
 mnemonicOf (OP2 {..}) = map show micros2
 mnemonicOf (OP3 {..}) = (if cla then ("CLA" :) else id) (map show micros3)
 mnemonicOf (UNK {}) = ["UNK"]
