@@ -16,33 +16,44 @@
 \author{Thomas DuBuisson and Garrett Morris}
 % \date{February 13, 2012}
 
+\def\inl#1{\texttt{#1}}
 \def\Int{\texttt{Int12}}
 
 \begin{document}
 \maketitle
 
 \section{Code Layout}
-The Haskell programming language is strongly typed and allows
-algebraic data types (ADTs, from here on called {\em types}).  We
-created types representing the PDP/8 ISA, addressing modes, decoded
-object files, 12 bit integers (\Int{}), and state of the PDP/8 machine.
+The Haskell programming language is strongly typed and allows algebraic data types (ADTs, from here
+on called {\em types}).  The \inl{Types} module contains definitions of types representing PDP/8
+instructions (\inl{Instr}), addressing modes, decoded object files, 12 bit integers (\Int{}), and
+tuples of values representing the state of the registers.  The \inl{Instr} type attempts to capture
+the meaning, rather than the form, of PDP/8 instructions; for example, we use enumerations to
+capture the various micro-operations, and attempt to exclude invalid combinations (such as \inl{RTR
+  RTL}) in the type definition.  This significantly simplifies the \inl{Execute} module.  Similarly,
+accessor functions, such the \inl{indirection} function that retrieves the indirection of an
+operator, are only defined for memory instructions.  This means that improper use of them would
+result in runtime errors rather than incorrect operation.
 
-To ease operations, the object files are first parsed into the object-file
-format for loading into memory.  There is also an instruction decoding to
-convert \Int{}s into the ISA type, used in the {\em fetch} operation.
+To ease operations, the object files are first parsed into the object-file format for loading into
+memory.  There is also an instruction decoding to convert \Int{}s into the ISA type, used in the
+{\em fetchInstruction} operation.
 
-Execution Unit - it executes.
+The \inl{Execute} module simulates the operation of the PDP/8 central processor.  We do not attempt
+to simulate the CPMA (memory address) or MB (memory buffer) registers; rather, suitable values are
+passed as arguments to the various functions in the \inl{Execute} module.  We do emulate some
+details of the PDP/8 microarchitecture---for example, the \inl{PC} register is incremented
+immediately after instruction fetch, and skips are then implemented with one further increment of
+the \inl{PC} register.
 
-All memory operation use the {\em load}, {\em store}, and {\em fetch} operations
-provided by the Memory module.  By keeping these definitions in one place we can
-easily check for proper memory logging and insert any desired debugging.
+Memory is modelled by a map from addresses to \Int{} values.  All memory operation are implemented
+using the {\em load}, {\em store}, and {\em fetchInstruction} functions provided by the \inl{Memory}
+module.  By keeping these definitions in one place we can easily check for proper memory logging and
+insert any desired debugging.
 
-In its purest form, the Haskell language is void of mutable types.  To
-simulate mutable memory of the machine state type, which contains
-immutable registers as well as a mapping from addresses to values, we
-use a ``State Monad'' which provides the illusion of mutable
-operations while constructing and passing new, immutable, structures in
-a manner transparent to the user of the monad.
+Haskell does not directly support mutation.  We model the stateful operation of the PDP/8, such as
+updating registers or memory, by using a {\em state monad}, which represents stateful computation in
+a mutation-free fashion, translating intuitive operations such as \inl{getPC} or \inl{setPC} into
+transition functions for an underlying state type.
 
 \section{Features}
 Features include:

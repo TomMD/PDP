@@ -54,8 +54,8 @@ PTR8,   S8
 PTR9,   S9
                                 / SEARCH COUNT
 
-CLO,    6700                    / -1000000  LOW 12 BITS
-CHI,    7413                    / -1000000 HIGH 12 BITS
+CLO,    7700                    / -1000000  LOW 12 BITS
+CHI,    7777                    / -1000000 HIGH 12 BITS
 
 PD0M1,  D0-1                    / AUTOINCREMENT PTR TO D0
 KM10,   -12                     / MINUS 10.
