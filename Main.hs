@@ -22,10 +22,11 @@ import System.Console.Haskeline.Class
 import System.IO (hPutStrLn, stderr)
 import qualified Data.Map as M
 
-newtype DebugOp = DS { unDS :: MonadCLI () }
+data DebugOp = DS { perStep :: MonadCLI ()
+                  , breakPoints :: [Int12] }
 
 noDebug :: DebugOp
-noDebug = DS (return ())
+noDebug = DS (return ()) []
 
 type MonadCLI a = StateT DebugOp PDP8 a
 
@@ -81,10 +82,11 @@ loop = do
       return True
 
 addDebug :: String -> MonadCLI ()
-addDebug str = modify (\s -> DS $ unDS s >> outputStr (str ++ ": ") >> op)
+addDebug str = modify (\s -> s { perStep = perStep s >> outputStr (str ++ ": ") >> op })
     where op = parseGetter (filter isAlpha str)
 
 processCmd :: String -> MonadCLI ()
+processCmd "clearbp" = modify (\s -> s { breakPoints = [] })
 processCmd "reset" = lift reset
 processCmd "addrload" = lift (setPC =<< getSR)
 processCmd "deposit" =
@@ -124,12 +126,14 @@ processCmd _ = do
         , "\treset             Reset all memory, registers, and stats (to zero)"
         , "\taddrload          Loads the contents of SR into PC (substituting for the unimplemented CPMA)"
         , "\tdeposit           Loads the contents of SR into the memory address in PC (substituting for"
+        , "\tclearbp           Clear all breakpoints"
         , "\t                  CPMA) and increments PC"
         , "-----------"
         , "Locations:"
         , "\tstats             Statistics (not settable!)"
         , "\tlogs              Log files  (not settable!)"
         , "\tmem               Memory (set with 'set mem <octAddr> <oct>')"
+        , "\tbp                Break points (setting is accumulative)"
         , "\t<reg>             Register (pc,ac,l,sr,ir)"
         ]
 
@@ -138,7 +142,12 @@ whenM :: Monad m => m Bool -> m () -> m ()
 whenM b f = b >>= \x -> if x then f else return ()
 
 run :: MonadCLI ()
-run = whenM (fmap not doStep) run
+run = whenM (do
+             st <- fmap not doStep
+             s  <- get
+             pc <- lift getPC
+             let bk = not $ pc `elem` (breakPoints s)
+             return (st && bk)) run
 
 parseNum :: String -> Int
 parseNum "" = 1
@@ -157,6 +166,7 @@ parseGetter "ac"    = lift getAC    >>= prnt
 parseGetter "l"     = lift getL     >>= prnt
 parseGetter "sr"    = lift getSR    >>= prnt
 parseGetter "ir"    = lift getIR    >>= prnt . decodeInstr
+parseGetter "bp"    = fmap breakPoints get >>= prnt
 parseGetter _       = outputStrLn "Unknown location for read operation!"
 
 setVal :: String -> MonadCLI ()
@@ -173,6 +183,7 @@ setVal str =
     "l"   -> lift . setL . fromIntegral $valO
     "sr"  -> lift . setSR $ valO
     "ir"  -> lift . setIR $ valO
+    "bp"  -> modify (\s -> s { breakPoints = valO : breakPoints s })
     _     -> outputStrLn "Unknown location for write operation!"
 
 -- Returns true if halted
@@ -182,7 +193,7 @@ doStep = do
   if h then return True
     else do b <- lift step
             s <- get
-            unDS s
+            perStep s
             res <- lift isHalted
             when res (outputStrLn "Program HALTed")
             return res
