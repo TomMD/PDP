@@ -1,13 +1,20 @@
 \documentclass[11pt]{exam}
 
-\usepackage{amsmath,inconsolata,verbatim}
+\usepackage{amsmath,verbatim,multicol}
+\usepackage[compact]{titlesec}
+\usepackage{mdwlist}
 
 \setlength{\parskip}{5pt}
 \setlength{\parindent}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\topskip}{0pt}
+\setlength{\topmargin}{0pt}
+\setlength{\topsep}{0pt}
+\setlength{\partopsep}{0pt}
 
 \title{PDP/8 Simulator in Haskell}
 \author{Thomas DuBuisson and Garrett Morris}
-\date{February 13, 2012}
+% \date{February 13, 2012}
 
 \def\Int{\texttt{Int12}}
 
@@ -37,6 +44,16 @@ use a ``State Monad'' which provides the illusion of mutable
 operations while constructing and passing new, immutable, structures in
 a manner transparent to the user of the monad.
 
+\section{Features}
+Features include:
+{\small
+\begin{itemize*}
+\item Command line as well as REPL interfaces.
+\item Flexible execution: single instruction stepping, multi-stepping, and execution that continutes until hitting a break-point.
+\item Flexible setting and reading of memory and registers (including the switch register).
+\item Logging of instruction counts, cycles, branch log, and memory accesses.
+\end{itemize*}
+}
 \section{Test Strategy}
 Early testing involved using a Haskell interpreter (GHCi) to
 investigate internal data structures.  Once an operational PDP/8
@@ -53,7 +70,8 @@ based book ``Learn to Program''.  Using the letters S, A, and I to
 indicate the programs that test sub-routines, auto-increment, and
 indirect addressing, our test programs included:
 
-\begin{itemize}
+{\small
+\begin{itemize*}
 \item add01.as - from the course web site.
 \item countBinOnes.as - Tests basic control and rotation, from ``Learn to Program''.
 \item euler24.as - A full program that computes the 63rd lexiographic ordering of
@@ -62,38 +80,70 @@ indirect addressing, our test programs included:
 \item printASC.as - A sub-routine driven ASC output test program.  (A)
 \item jms.as - A trivial sub-routine test. (SI)
 \item square.as - Compute the square of a two-digit octal number (uses IO).  (SI)
-\end{itemize}
+\end{itemize*}
+}
 
-\section{Discovered Bugs}
-\begin{itemize}
-\item By stepping through instructions in the REPL
- \begin{itemize}
- \item Rotate left failed to set the link bit correctly.
- \item Direct addressing implemented as indirect addressing.
- \item Incorrect ASC translation on text entry.
- \end{itemize}
+\section{Example Run}
+An example run of the countbinOnes.as program:
 
-\item By interpreting the interpreter and observing our AST
- \begin{itemize}
- \item Invalid micro-op decoding
- \end{itemize}
+\begin{multicols}{2}
+{\scriptsize
+\begin{verbatim}
+# load test/countBinOnes.obj
+# run
+Program HALTed
+# show stats
+Total instructions: 19
+Total cycles:       23
+Breakdown:
+                CLA 1
+                CLL 3
+                DCA 1
+                HLT 1
+                ISZ 2
+                JMP 2
+                RAL 3
+                TAD 1
+# show logs
+Memory Log:
+Instr Fetch 200
+Instr Fetch 201
+Data Write  215
+Instr Fetch 202
+Data Read   216
+Instr Fetch 203
+Instr Fetch 205
+Instr Fetch 206
+Instr Fetch 207
+Instr Fetch 205
+Instr Fetch 206
+Instr Fetch 210
+Instr Fetch 211
+Data Read   215
+Data Write  215
+Instr Fetch 212
+Instr Fetch 214
+Instr Fetch 205
+Instr Fetch 206
+Instr Fetch 210
+Instr Fetch 211
+Data Read   215
+Data Write  215
+Instr Fetch 212
+Instr Fetch 213
 
-\item By observing logs and statistics
- \begin{itemize}
- \item Invalid reporting of memory read operations
- \item Instruction totals $\neq$ total observed mnemonics
- \end{itemize}
-
-\item By mixed methods
- \begin{itemize}
- \item ASM syntax bugs cause invalid object code.
- \item Incorrect cycle counting for some instructions.
- \end{itemize}
-
-\item By property tests
- \begin{itemize}
- \item Absolute value of \Int{} types could result in out-of-bounds values.
- \end{itemize}
-\end{itemize}
+Branch Log:
+203 205 SKP Taken
+206 210 SKP Not taken
+207 205 JMP Taken
+206 210 SKP Taken
+212 214 SKP Taken
+214 205 JMP Taken
+206 210 SKP Taken
+212 214 SKP Not taken
+213 215 SKP Not taken
+\end{verbatim}
+}
+\end{multicols}
 
 \end{document}
