@@ -1,0 +1,96 @@
+\documentclass[11pt]{exam}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{fancyvrb}
+\usepackage{verbatim}
+\usepackage{subfigure}
+\usepackage{amsmath}
+
+\title{PDP/8 Simulator in Haskell}
+\author{Thomas DuBuisson, Garrett Morris}
+\begin{document}
+\maketitle
+
+\section{Code Layout}
+The Haskell programming language is strongly typed and allows
+algebraic data types (ADTs, from here on called {\em types}).  We
+created types representing the PDP/8 ISA, addressing modes, decoded
+object files, 12 bit integers (Int12), and state of the PDP/8 machine.
+
+To ease operations, the object files are first parsed into the object-file
+format for loading into memory.  There is also an instruction decoding to
+convert Int12s into the ISA type, used in the {\em fetch} operation.
+
+Execution Unit - it executes.
+
+All memory operation use the {\em load}, {\em store}, and {\em fetch} operations
+provided by the Memory module.  By keeping these definitions in one place we can
+easily check for proper memory logging and insert any desired debugging.
+
+In its purest form, the Haskell language is void of mutable types.  To
+simulate mutable memory of the machine state type, which contains
+immutable registers as well as a mapping from addresses to values, we
+use a ``State Monad'' which provides the illusion of mutable
+operations while constructing and passing new, immutable, structures in
+a manner transparent to the user of the monad.
+
+\section{Test Strategy}
+Early testing involved using a Haskell interpreter (GHCi) to
+investigate internal data structures.  Once an operational PDP/8
+interpreter was ready we could step through assembly instructions in
+an interactive Read-Evaluate-PRint loop (REPL).  Entire programs,
+listed below, were also tested and the results were compared to those
+expected (i.e. known answer tests).  Property tests and random test
+vectors were used to check small, but critical, sections of the code
+(namely, the Int12 type).
+
+\subsection{Test Cases}
+The test cases were mostly borrowed from the internet and a PDP/8
+based book ``Learn to Program''.  Using the letters S, A, and I to
+indicate the programs that test sub-routines, auto-increment, and
+indirect addressing, our test programs included:
+
+\begin{itemize}
+\item add01.as - from the course web site.
+\item countBinOnes.as - Tests basic control and rotation, from ``Learn to Program''.
+\item euler24.as - A full program that computes the 63rd lexiographic ordering of
+  the digits 0 through 9 (well-known problem euler-24). (SAI)
+\item hello-world.as - A simple text-output test. (SAI)
+\item printASC.as - A sub-routine driven ASC output test program.  (A)
+\item jms.as - A trivial sub-routine test. (SI)
+\item square.as - Compute the square of a two-digit octal number (uses IO).  (SI)
+\end{itemize}
+
+\section{Discovered Bugs}
+\begin{itemize}
+\item By stepping through instructions in the REPL
+ \begin{itemize}
+ \item Rotate left failed to set the link bit correctly.
+ \item Direct addressing implemented as indirect addressing.
+ \item Incorrect ASC translation on text entry.
+ \end{itemize}
+
+\item By interpreting the interpreter and observing our AST
+ \begin{itemize}
+ \item Invalid micro-op decoding
+ \end{itemize}
+
+\item By observing logs and statistics
+ \begin{itemize}
+ \item Invalid reporting of memory read operations
+ \item Instruction totals $\neq$ total observed mnemonics
+ \end{itemize}
+
+\item By mixed methods
+ \begin{itemize}
+ \item ASM syntax bugs cause invalid object code.
+ \item Incorrect cycle counting for some instructions.
+ \end{itemize}
+
+\item By property tests
+ \begin{itemize}
+ \item Absolute value of Int12 types could result in out-of-bounds values.
+ \end{itemize}
+\end{itemize}
+
+\end{document}
