@@ -1,13 +1,16 @@
 \documentclass[11pt]{exam}
-\usepackage{xcolor}
-\usepackage{cite}
-\usepackage{fancyvrb}
-\usepackage{verbatim}
-\usepackage{subfigure}
-\usepackage{amsmath}
+
+\usepackage{amsmath,inconsolata,verbatim}
+
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
 
 \title{PDP/8 Simulator in Haskell}
-\author{Thomas DuBuisson, Garrett Morris}
+\author{Thomas DuBuisson and Garrett Morris}
+\date{February 13, 2012}
+
+\def\Int{\texttt{Int12}}
+
 \begin{document}
 \maketitle
 
@@ -15,11 +18,11 @@
 The Haskell programming language is strongly typed and allows
 algebraic data types (ADTs, from here on called {\em types}).  We
 created types representing the PDP/8 ISA, addressing modes, decoded
-object files, 12 bit integers (Int12), and state of the PDP/8 machine.
+object files, 12 bit integers (\Int{}), and state of the PDP/8 machine.
 
 To ease operations, the object files are first parsed into the object-file
 format for loading into memory.  There is also an instruction decoding to
-convert Int12s into the ISA type, used in the {\em fetch} operation.
+convert \Int{}s into the ISA type, used in the {\em fetch} operation.
 
 Execution Unit - it executes.
 
@@ -38,11 +41,11 @@ a manner transparent to the user of the monad.
 Early testing involved using a Haskell interpreter (GHCi) to
 investigate internal data structures.  Once an operational PDP/8
 interpreter was ready we could step through assembly instructions in
-an interactive Read-Evaluate-PRint loop (REPL).  Entire programs,
+an interactive Read-Evaluate-Print Loop (REPL).  Entire programs,
 listed below, were also tested and the results were compared to those
 expected (i.e. known answer tests).  Property tests and random test
 vectors were used to check small, but critical, sections of the code
-(namely, the Int12 type).
+(namely, the \Int{} type).
 
 \subsection{Test Cases}
 The test cases were mostly borrowed from the internet and a PDP/8
@@ -89,7 +92,7 @@ indirect addressing, our test programs included:
 
 \item By property tests
  \begin{itemize}
- \item Absolute value of Int12 types could result in out-of-bounds values.
+ \item Absolute value of \Int{} types could result in out-of-bounds values.
  \end{itemize}
 \end{itemize}
 
