@@ -1,7 +1,6 @@
 module Main where
 
-import qualified CLI as CLI
-import Execute -- step :: PDP8 Bool (True == terminate?)
+import Execute
 import Memory (loadProgram, store)
 import Monad
 import Parse
@@ -9,6 +8,7 @@ import Prelude hiding (catch)
 import Stats
 import Types
 import Util
+import qualified CLI as CLI
 
 import Control.Monad
 import Control.Monad.IO.Class

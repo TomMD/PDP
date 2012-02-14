@@ -5,9 +5,9 @@ module Execute
 import Control.Monad
 import Data.Bits
 
+import Memory
 import Monad
 import Types
-import Memory
 import Util
 
 step :: PDP8 ()

@@ -29,15 +29,13 @@ module Monad
   , getInputChar, getInputLine, outputStr, outputStrLn
   ) where
 
-import Prelude hiding (catch)
+import Control.Monad.IO.Class
 import Control.Monad.State
 import Control.Monad.Writer
-import qualified Data.DList as D
-import Data.Maybe
 import Data.Bits
+import Data.Maybe
+import Prelude hiding (catch)
 import System.Console.Haskeline.Class
-import Control.Monad.IO.Class
-
 import qualified Data.DList as D
 
 import Types

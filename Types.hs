@@ -25,19 +25,20 @@ module Types
   , initialState, initialMemory, initialStats
   , typeOf ) where
 
-import qualified Data.Map as M
-import qualified Data.DList as D
-import Data.DList (DList)
 import Data.Bits
 import Data.Char (digitToInt)
+import Data.DList (DList)
 import Numeric
+import qualified Data.DList as D
+import qualified Data.Map as M
+
 import Util
 
 instance (Show a) => Show (DList a) where
   show = show . D.toList
 
- -- Branches are recorded as (branch address, target address, branch type,
- -- whether taken)
+ -- Branches are recorded as (branch address, target address, branch
+ -- type, whether taken)
 data BranchType = JMSBranch | JMPBranch | SkipBranch
 type BranchLog = DList (Addr,Addr,BranchType,Bool)
 
@@ -78,8 +79,8 @@ data Value = VInstr { vInstr :: (Instr, Int12) } | VAddr { vAddr :: Addr }
 
 type Offset = Int12
 
--- |The instruction data type carries the decoded op, indirection, memory page
--- flags, and offset if applicable.
+-- The instruction data type carries the decoded op, indirection,
+-- memory page flags, and offset if applicable.
 data Instr = AND { indirection :: Indirection
                  , page        :: MemPage
                  , offset      :: Offset }

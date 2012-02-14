@@ -8,14 +8,14 @@ module Stats
   ) where
 
 import Arch
+import Monad
 import Parse
 import Types
-import Monad
 
 import Data.List (intercalate)
-import qualified Data.Map as M
-import qualified Data.DList as D
 import Numeric
+import qualified Data.DList as D
+import qualified Data.Map as M
 
 renderLogs :: Stats -> String
 renderLogs s =

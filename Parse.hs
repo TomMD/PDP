@@ -25,10 +25,7 @@ isInstr _          = False
 isAddr :: Value -> Bool
 isAddr = not . isInstr
 
--- instr constr [] raw = Instr UnknownOp   Nothing Nothing Nothing raw
--- instr constr xs raw = Instr (constr xs) Nothing Nothing Nothing raw
-
--- |Parse and ASCii obj file into an AST
+-- Parse and ASCii obj file into an AST
 parseObj :: String -> [Value]
 parseObj = lexer . map (filter isDigit) . lines
 

@@ -4,12 +4,12 @@ module Memory
   , loadProgram
   )where
 
+import Control.Monad (liftM)
+import Control.Monad.State (gets)
 import Data.Bits
 import Data.Maybe (fromMaybe)
-import qualified Data.Map as M
 import Numeric (showOct)
-import Control.Monad.State (gets)
-import Control.Monad (liftM)
+import qualified Data.Map as M
 
 import Arch (addrMode, AddrMode(..))
 import Monad
@@ -22,8 +22,8 @@ findWithDefault d k m = fromMaybe d (M.lookup k m)
 
 -- Memory Operations --
 
--- Load a value from a given address.  If this is for instructions, use 'fetch'
--- instead.
+-- Load a value from a given address.  If this is for instructions,
+-- use 'fetch' instead.
 load :: Addr -> PDP8 Int12
 load a =
   logMem DataRead a >>
@@ -35,8 +35,8 @@ store a i =
   logMem DataWrite a >>
   modMem (M.insert a i)
 
--- Fetch and decode an instruction from a memory address; returns the decoded
--- instruction and stores it in IR.
+-- Fetch and decode an instruction from a memory address; returns the
+-- decoded instruction and stores it in IR.
 fetchInstruction :: Addr -> PDP8 Instr
 fetchInstruction a = do
   logMem InstrFetch a
@@ -46,8 +46,8 @@ fetchInstruction a = do
   incStats i
   return i
 
--- Given an instruction aid its address, returns the effective address while
--- performing any needed auto-incrementing.
+-- Given an instruction aid its address, returns the effective address
+-- while performing any needed auto-incrementing.
 effectiveAddr :: Instr -> Int12 -> PDP8 Addr
 effectiveAddr i iaddr =
     case typeOf i of
