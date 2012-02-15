@@ -31,8 +31,12 @@ doOp1 cla micros logical =
     do when cla (setAC 0)
        when (CLL `elem` micros) (setL 0)
        when (CMA `elem` micros) (modAC complement)
-       when (CML `elem` micros) (modL complement)
-       when (IAC `elem` micros) (modAC (+1))
+       when (CML `elem` micros) (modL (\x -> if x == 1 then 0 else 1))
+       when (IAC `elem` micros) (do
+                        a <- getAC
+                        let a' = a + 1
+                        setAC a'
+                        when (a == oct 7777) (setL 1))
        case logical of
          Nothing -> return ()
          Just RAR -> modLAC rotR
@@ -94,9 +98,10 @@ execute iaddr i addr@(Addr v) = do
                       a <- getAC
                       let sum = a + operand
                       setAC sum
-                      when (signum a == signum operand
-                            && signum a /= signum sum)
-                           (modL complement)
+                      when (testBit (fromIntegral a + fromIntegral operand :: Int) 12)
+--                      when (signum a == signum operand
+--                            && signum a /= signum sum && sum /= 0 && a /= 0)
+                            (modL (\x -> if x == 1 then 0 else 1))
          ISZ {} -> do operand <- fmap (+1) (load addr)
                       store addr operand
                       when (operand == 0) (modPC (1+))
